@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"slices"
 
@@ -30,14 +31,22 @@ func main() {
 
 		decoder := json.NewDecoder(r.Body)
 		if err := decoder.Decode(&event); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Bad request", http.StatusBadRequest)
 			return
 		}
 
 		events = append(events, event)
-		res, _ := json.Marshal(event)
+		res, err := json.Marshal(event)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(res)
+		_, err = w.Write(res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	})
 
 	r.Route("/event/{eventId}", func(r chi.Router) {
@@ -57,13 +66,20 @@ func main() {
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(res)
+			_, err = w.Write(res)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 		})
 		r.Put("/", func(w http.ResponseWriter, r *http.Request) {
 			eventId := r.PathValue("eventId")
 			i := slices.IndexFunc(events, func(e Event) bool {
 				return e.Id == eventId
 			})
+			if i < 0 {
+				http.Error(w, "Event not found", http.StatusNotFound)
+				return
+			}
 
 			var event Event
 			decoder := json.NewDecoder(r.Body)
@@ -71,16 +87,19 @@ func main() {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
+			events[i] = event
 
-			if i < 0 {
-				events = append(events, event)
-			} else {
-				events[i] = event
+			res, err := json.Marshal(event)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 
-			res, _ := json.Marshal(event)
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(res)
+			_, err = w.Write(res)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 		})
 		r.Delete("/", func(w http.ResponseWriter, r *http.Request) {
 			eventId := r.PathValue("eventId")
@@ -97,5 +116,5 @@ func main() {
 	})
 
 	fmt.Printf("Listening on port %d...\n", 33)
-	http.ListenAndServe(":33", r)
+	log.Fatal(http.ListenAndServe(":33", r))
 }
