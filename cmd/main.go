@@ -21,7 +21,7 @@ type Event struct {
 }
 
 func main() {
-	events := []Event{}
+	var events []Event
 
 	r := chi.NewRouter()
 	r.Use(middleware.StripSlashes)
@@ -37,6 +37,20 @@ func main() {
 
 		events = append(events, event)
 		res, err := json.Marshal(event)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, err = w.Write(res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	})
+
+	r.Get("/events", func(w http.ResponseWriter, r *http.Request) {
+		res, err := json.Marshal(events)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
