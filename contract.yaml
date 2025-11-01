@@ -1,0 +1,270 @@
+openapi: 3.1.2
+info:
+  title: T-meeting
+  version: '1.0.3'
+tags:
+  - name: event
+    description: Взаимодействие с мероприятием
+  - name: user
+    description: Взаимодействие с пользователем
+paths:
+  /event:
+    post:
+      tags:
+        - event
+      summary: Добавить новое мероприятие
+      operationId: addEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Успешная операция
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Некорректный запрос
+  /events:
+    get:
+      tags:
+        - event
+      summary: Получить все мероприятия
+      operationId: getEvents
+      responses:
+        '200':
+          description: Успешная операция
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+  /event/{eventId}:
+    get:
+      tags:
+        - event
+      summary: Получить мероприятие по Id
+      operationId: getEvent
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Успешная операция
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Предоставлен некорректный Id
+        '404':
+          description: Мероприятие не найдено
+    put:
+      tags:
+        - event
+      summary: Изменить существующее мероприятие
+      operationId: updateEvent
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+      responses:
+        '200':
+          description: Успешная операция
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Некорректный запрос
+        '404':
+          description: Мероприятие не найдено
+    delete:
+      tags:
+        - event
+      summary: Удалить мероприятие
+      operationId: deleteEvent
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Успешная операция
+        '400':
+          description: Предоставлен некорректный Id
+  /user:
+    get:
+      tags:
+        - user
+      summary: Получить данные пользователя
+      operationId: getUser
+      parameters:
+        - name: userId
+          in: header
+          schema:
+            $ref: '#/components/schemas/Id'
+      responses:
+        '200':
+          description: Успешная операция
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Предоставлен некорректный Id
+        '404':
+          description: Пользователь не существует
+  /login:
+    post:
+      tags:
+        - user
+      summary: Войти в аккаунт
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Успешная операция
+          headers:
+            X-Access-Expires-After:
+              description: Время окончания действия токена
+              schema:
+                type: string
+                format: time
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+        '401':
+          description: Некорректные данные пользователя
+components:
+  schemas:
+    Id:
+      type: string
+      format: uuid
+      examples:
+        - 5378afbf-e87b-411f-95df-b1aeeb5b770f
+    Event:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        name:
+          type: string
+          examples:
+            - Очень классное мероприятие
+        metadata:
+          $ref: '#/components/schemas/EventMetadata'
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentBlock'
+    User:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        email:
+          type: string
+          format: email
+          examples:
+            - anyemail@gmail.com
+        password:
+          type: string
+          format: password
+          description: Хешированный пароль
+    EventMetadata:
+      type: object
+      properties:
+        datetime:
+          type: string
+          format: datetime
+        location:
+          type: string
+    ContentBlock:
+      properties:
+        block:
+          type: string
+          description: Тип содержимого
+      oneOf:
+        - $ref: '#/components/schemas/PromoTextBlock'
+        - $ref: '#/components/schemas/MapBlock'
+        - $ref: '#/components/schemas/TimelineBlock'
+      discriminator:
+        propertyName: block
+        mapping:
+          promo-text: '#/components/schemas/PromoTextBlock'
+          map: '#/components/schemas/MapBlock'
+          timeline: '#/components/schemas/TimelineBlock'
+    PromoTextBlock:
+      type: object
+      properties:
+        block:
+          const: promo-text
+        payload:
+          type: array
+          items:
+            type: string
+    MapBlock:
+      type: object
+      properties:
+        block:
+          const: map
+        payload:
+          type: object
+          required:
+            - longitude
+            - latitude
+            - title
+          properties:
+            longitude:
+              type: number
+            latitude:
+              type: number
+            title:
+              type: string
+            icon:
+              type: string
+              format: uri
+    TimelineBlock:
+      type: object
+      properties:
+        block:
+          const: timeline
+        payload:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              time:
+                type: string
+                format: time
+  parameters:
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
