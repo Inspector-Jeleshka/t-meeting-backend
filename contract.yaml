@@ -7,6 +7,9 @@ tags:
     description: Взаимодействие с мероприятием
   - name: user
     description: Взаимодействие с пользователем
+servers:
+  - url: http://localhost:33
+    description: Local dev server
 paths:
   /event:
     post:
