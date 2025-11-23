@@ -32,10 +32,10 @@ type ContentBlock struct {
 type PromoTextPayload []string // promo-text когда нужен будет
 
 type MapPayload struct {
-	Lon   float64 `json:"lon"` // map примерно так должен описываться, тоже потом пригодится
-	Lat   float64 `json:"lat"`
-	Title string  `json:"title"`
-	Icon  string  `json:"icon"`
+	Longitude float64 `json:"longitude"` // map примерно так должен описываться, тоже потом пригодится
+	Latitude  float64 `json:"latitude"`
+	Title     string  `json:"title"`
+	Icon      string  `json:"icon"`
 }
 
 type TimelineItem struct { //легендарный таймлайн

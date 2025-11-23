@@ -13,9 +13,28 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var dbpool *pgxpool.Pool
+type EventRepository interface {
+	Create(c context.Context, e *domain.Event) error
+	GetAll(c context.Context) ([]*domain.Event, error)
+	GetByID(c context.Context, id uuid.UUID) (*domain.Event, error)
+	Update(c context.Context, id uuid.UUID, e *domain.Event) error
+	Delete(c context.Context, id uuid.UUID) error
+}
 
-func init() {
+type mapEventRepository struct {
+	database map[uuid.UUID]*domain.Event
+}
+
+type pgxEventRepository struct {
+	database *pgxpool.Pool
+}
+
+func NewMapEventRepository() EventRepository {
+	db := make(map[uuid.UUID]*domain.Event)
+	return &mapEventRepository{database: db}
+}
+
+func NewEventRepository() EventRepository {
 	dsn := "postgres://postgres:coolpassword@localhost:5433/tmeeting?sslmode=disable"
 
 	cfg, err := pgxpool.ParseConfig(dsn)
@@ -35,34 +54,14 @@ func init() {
 		log.Fatalf("pgx ping: %v", err)
 	}
 
-	dbpool = pool
 	log.Println("Connected to postgres (repository)")
+
+	return &pgxEventRepository{database: pool}
 }
 
-type EventRepository interface {
-	Create(c context.Context, e *domain.Event) error
-	GetAll(c context.Context) ([]*domain.Event, error)
-	GetByID(c context.Context, id uuid.UUID) (*domain.Event, error)
-	Update(c context.Context, id uuid.UUID, e *domain.Event) error
-	Delete(c context.Context, id uuid.UUID) error
-}
-
-type eventRepository struct {
-	database map[uuid.UUID]*domain.Event
-}
-
-func NewEventRepository() EventRepository {
-	db := make(map[uuid.UUID]*domain.Event)
-	return &eventRepository{database: db}
-}
-
-func (er *eventRepository) Create(ctx context.Context, e *domain.Event) error {
+func (erep *pgxEventRepository) Create(ctx context.Context, e *domain.Event) error {
 	id := uuid.New()
 	e.ID = id
-	er.database[id] = e
-	if dbpool == nil {
-		return nil
-	}
 
 	metaBytes, err := json.Marshal(e.Metadata)
 	if err != nil {
@@ -77,7 +76,7 @@ func (er *eventRepository) Create(ctx context.Context, e *domain.Event) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	_, err = dbpool.Exec(ctx, `
+	_, err = erep.database.Exec(ctx, `
     INSERT INTO events (id, name, metadata, content, status)
     VALUES ($1, $2, $3::jsonb, $4::jsonb, COALESCE($5, 'draft'))
 `,
@@ -90,29 +89,52 @@ func (er *eventRepository) Create(ctx context.Context, e *domain.Event) error {
 	return err
 }
 
-func (er *eventRepository) GetAll(_ context.Context) ([]*domain.Event, error) {
+func (erep *pgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, error) {
+	return nil, nil
+}
+
+func (erep *pgxEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error) {
+	return nil, nil
+}
+
+func (erep *pgxEventRepository) Update(ctx context.Context, id uuid.UUID, event *domain.Event) error {
+	return nil
+}
+
+func (erep *pgxEventRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
+func (erep *mapEventRepository) Create(_ context.Context, event *domain.Event) error {
+	id := uuid.New()
+	event.ID = id
+	erep.database[id] = event
+	return nil
+}
+
+func (erep *mapEventRepository) GetAll(_ context.Context) ([]*domain.Event, error) {
 	var res []*domain.Event
-	for _, v := range er.database {
+	for _, v := range erep.database {
 		res = append(res, v)
 	}
 	return res, nil
 }
 
-func (er *eventRepository) GetByID(_ context.Context, id uuid.UUID) (*domain.Event, error) {
-	event := er.database[id]
+func (erep *mapEventRepository) GetByID(_ context.Context, id uuid.UUID) (*domain.Event, error) {
+	event := erep.database[id]
 	if event == nil {
 		return nil, errors.New("мероприятие не найдено")
 	}
-	return er.database[id], nil
+	return erep.database[id], nil
 }
 
-func (er *eventRepository) Update(_ context.Context, id uuid.UUID, e *domain.Event) error {
-	e.ID = id
-	er.database[id] = e
+func (erep *mapEventRepository) Update(_ context.Context, id uuid.UUID, event *domain.Event) error {
+	event.ID = id
+	erep.database[id] = event
 	return nil
 }
 
-func (er *eventRepository) Delete(_ context.Context, id uuid.UUID) error {
-	delete(er.database, id)
+func (erep *mapEventRepository) Delete(_ context.Context, id uuid.UUID) error {
+	delete(erep.database, id)
 	return nil
 }
