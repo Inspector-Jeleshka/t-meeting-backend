@@ -10,6 +10,7 @@ import (
 	"t-meeting-backend/domain"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -98,12 +99,63 @@ func (er *eventRepository) GetAll(_ context.Context) ([]*domain.Event, error) {
 	return res, nil
 }
 
-func (er *eventRepository) GetByID(_ context.Context, id uuid.UUID) (*domain.Event, error) {
-	event := er.database[id]
-	if event == nil {
+func (er *eventRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error) {
+	if e, ok := er.database[id]; ok {
+		return e, nil
+	}
+
+	if dbpool == nil {
 		return nil, errors.New("мероприятие не найдено")
 	}
-	return er.database[id], nil
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	const query = `
+        SELECT name, metadata, content, status, created_at, updated_at
+        FROM events
+        WHERE id = $1
+    `
+
+	var (
+		name         string
+		metaBytes    []byte
+		contentBytes []byte
+		status       string
+		createdAt    time.Time
+		updatedAt    time.Time
+	)
+
+	row := dbpool.QueryRow(ctx, query, id)
+	if err := row.Scan(&name, &metaBytes, &contentBytes, &status, &createdAt, &updatedAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("мероприятие не найдено")
+		}
+		return nil, err
+	}
+
+	var metadata domain.EventMetadata
+	if err := json.Unmarshal(metaBytes, &metadata); err != nil {
+		return nil, err
+	}
+
+	var content []domain.ContentBlock
+	if err := json.Unmarshal(contentBytes, &content); err != nil {
+		return nil, err
+	}
+
+	e := &domain.Event{
+		ID:        id,
+		Name:      name,
+		Metadata:  metadata,
+		Content:   content,
+		Status:    status,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
+	}
+
+	er.database[id] = e
+	return e, nil
 }
 
 func (er *eventRepository) Update(_ context.Context, id uuid.UUID, e *domain.Event) error {

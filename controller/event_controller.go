@@ -6,6 +6,7 @@ import (
 	"t-meeting-backend/domain"
 	"t-meeting-backend/usecase"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -61,29 +62,28 @@ func (ec *EventController) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ec *EventController) GetByID(w http.ResponseWriter, r *http.Request) {
-	eventID, err := uuid.Parse(r.PathValue("eventID"))
+func (c *EventController) GetEventById(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "eventID")
+	eventID, err := uuid.Parse(idStr)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
-	event, err := ec.EventUsecase.GetByID(r.Context(), eventID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	res, err := json.Marshal(event)
+	ctx := r.Context()
+	e, err := c.EventUsecase.GetByID(ctx, eventID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if e == nil {
+		http.Error(w, "Event not found", http.StatusNotFound)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(res)
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(e); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
