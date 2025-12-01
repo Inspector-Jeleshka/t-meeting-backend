@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"t-meeting-backend/route"
+	"t-meeting-backend/internal/route"
 
 	"github.com/go-chi/chi/v5"
 )

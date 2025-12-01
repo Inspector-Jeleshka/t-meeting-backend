@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"t-meeting-backend/internal/domain"
 	"time"
-
-	"t-meeting-backend/domain"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

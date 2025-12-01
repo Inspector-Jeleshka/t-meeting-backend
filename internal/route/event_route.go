@@ -1,9 +1,9 @@
 package route
 
 import (
-	"t-meeting-backend/controller"
-	"t-meeting-backend/repository"
-	"t-meeting-backend/usecase"
+	"t-meeting-backend/internal/controller"
+	"t-meeting-backend/internal/repository"
+	"t-meeting-backend/internal/service"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -11,7 +11,7 @@ import (
 func NewEventRouter(router chi.Router) {
 	er := repository.NewEventRepository()
 	ec := &controller.EventController{
-		EventUsecase: usecase.NewEventUsecase(er),
+		Svc: service.NewEventService(er),
 	}
 	router.Post("/event", ec.Create)
 	router.Get("/events", ec.GetAll)
