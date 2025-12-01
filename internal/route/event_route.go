@@ -4,12 +4,14 @@ import (
 	"t-meeting-backend/internal/controller"
 	"t-meeting-backend/internal/repository"
 	"t-meeting-backend/internal/service"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewEventRouter(router chi.Router) {
-	er := repository.NewEventRepository()
+func NewEventRouter(timeout time.Duration, db *pgxpool.Pool, router chi.Router) {
+	er := repository.NewEventRepository(timeout, db)
 	ec := &controller.EventController{
 		Svc: service.NewEventService(er),
 	}

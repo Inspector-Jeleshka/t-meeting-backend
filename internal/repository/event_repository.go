@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"t-meeting-backend/internal/domain"
 	"time"
 
@@ -29,7 +28,8 @@ type mapEventRepository struct {
 
 // Реализация поверх постгре
 type pgxEventRepository struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	timeout time.Duration
 }
 
 // NewMapEventRepository возвращает ин мемори реализацию.
@@ -39,29 +39,8 @@ func NewMapEventRepository() EventRepository {
 }
 
 // NewEventRepository поднимает пул соединений к постргес и возвращает репозиторий.
-func NewEventRepository() EventRepository {
-	dsn := "postgres://postgres:coolpassword@localhost:5433/tmeeting?sslmode=disable"
-
-	cfg, err := pgxpool.ParseConfig(dsn)
-	if err != nil {
-		log.Fatalf("pgx config: %v", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	pool, err := pgxpool.NewWithConfig(ctx, cfg)
-	if err != nil {
-		log.Fatalf("pgx connect: %v", err)
-	}
-
-	if err := pool.Ping(ctx); err != nil {
-		log.Fatalf("pgx ping: %v", err)
-	}
-
-	log.Println("Connected to postgres (repository)")
-
-	return &pgxEventRepository{pool: pool}
+func NewEventRepository(timeout time.Duration, pool *pgxpool.Pool) EventRepository {
+	return &pgxEventRepository{pool: pool, timeout: timeout}
 }
 
 // pgxEventRepository — работа с БД
@@ -83,7 +62,7 @@ func (erep *pgxEventRepository) Create(ctx context.Context, e *domain.Event) err
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, erep.timeout)
 	defer cancel()
 
 	_, err = erep.pool.Exec(ctx, `
@@ -94,7 +73,7 @@ func (erep *pgxEventRepository) Create(ctx context.Context, e *domain.Event) err
 }
 
 func (erep *pgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, erep.timeout)
 	defer cancel()
 
 	rows, err := erep.pool.Query(ctx, `
@@ -146,7 +125,7 @@ func (erep *pgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, er
 }
 
 func (erep *pgxEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, erep.timeout)
 	defer cancel()
 
 	var (
@@ -216,7 +195,7 @@ func (erep *pgxEventRepository) Update(ctx context.Context, id uuid.UUID, e *dom
 }
 
 func (erep *pgxEventRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, erep.timeout)
 	defer cancel()
 
 	cmdTag, err := erep.pool.Exec(ctx, `DELETE FROM events WHERE id = $1`, id)
