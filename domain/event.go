@@ -18,10 +18,9 @@ type Event struct {
 }
 
 type EventMetadata struct {
-	Date     string `json:"date"`             // "2025-11-23"
-	Time     string `json:"time"`             // "22:00"
-	Location string `json:"location"`         // "Общежитие нгту 10, комната 1004-2"
-	Reason   string `json:"reason,omitempty"` // "мой день рождения"
+	Datetime time.Time `json:"datetime"`         // "2025-11-23T22:00:00Z"
+	Location string    `json:"location"`         // "Общежитие нгту 10, комната 1004-2"
+	Reason   string    `json:"reason,omitempty"` // "мой день рождения"
 }
 
 type ContentBlock struct {
