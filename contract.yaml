@@ -1,7 +1,7 @@
 openapi: 3.1.2
 info:
   title: T-meeting
-  version: '1.0.3'
+  version: '1.0.4'
 tags:
   - name: event
     description: Взаимодействие с мероприятием
@@ -169,6 +169,12 @@ components:
         - 5378afbf-e87b-411f-95df-b1aeeb5b770f
     Event:
       type: object
+      required:
+        - id
+        - name
+        - metadata
+        - content
+        - status
       properties:
         id:
           $ref: '#/components/schemas/Id'
@@ -182,6 +188,19 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ContentBlock'
+        status:
+          type: string
+          description: Статус мероприятия
+          examples:
+            - draft
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
     User:
       type: object
       properties:
@@ -201,10 +220,14 @@ components:
       properties:
         datetime:
           type: string
-          format: datetime
+          format: date-time
         location:
           type: string
     ContentBlock:
+      type: object
+      required:
+        - block
+        - payload
       properties:
         block:
           type: string
