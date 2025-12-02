@@ -3,14 +3,15 @@ package controller
 import (
 	"encoding/json"
 	"net/http"
-	"t-meeting-backend/domain"
-	"t-meeting-backend/usecase"
+	"t-meeting-backend/internal/domain"
+	"t-meeting-backend/internal/service"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
 type EventController struct {
-	EventUsecase usecase.EventUsecase
+	Svc service.EventService
 }
 
 func (ec *EventController) Create(w http.ResponseWriter, r *http.Request) {
@@ -22,7 +23,7 @@ func (ec *EventController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = ec.EventUsecase.Create(r.Context(), &event)
+	err = ec.Svc.Create(r.Context(), &event)
 	if err != nil {
 		http.Error(w, "", http.StatusBadRequest)
 		return
@@ -42,7 +43,7 @@ func (ec *EventController) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ec *EventController) GetAll(w http.ResponseWriter, r *http.Request) {
-	events, err := ec.EventUsecase.GetAll(r.Context())
+	events, err := ec.Svc.GetAll(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -61,29 +62,28 @@ func (ec *EventController) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ec *EventController) GetByID(w http.ResponseWriter, r *http.Request) {
-	eventID, err := uuid.Parse(r.PathValue("eventID"))
+func (c *EventController) GetEventById(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "eventID")
+	eventID, err := uuid.Parse(idStr)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
-	event, err := ec.EventUsecase.GetByID(r.Context(), eventID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	res, err := json.Marshal(event)
+	ctx := r.Context()
+	e, err := c.Svc.GetByID(ctx, eventID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if e == nil {
+		http.Error(w, "Event not found", http.StatusNotFound)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(res)
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(e); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -101,7 +101,7 @@ func (ec *EventController) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = ec.EventUsecase.Update(r.Context(), eventID, &event)
+	err = ec.Svc.Update(r.Context(), eventID, &event)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -127,7 +127,7 @@ func (ec *EventController) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = ec.EventUsecase.Delete(r.Context(), eventID)
+	err = ec.Svc.Delete(r.Context(), eventID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
