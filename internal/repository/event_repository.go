@@ -38,13 +38,10 @@ func NewMapEventRepository() EventRepository {
 	return &mapEventRepository{database: db}
 }
 
-// NewEventRepository поднимает пул соединений к постргес и возвращает репозиторий.
-func NewEventRepository() EventRepository {
-	dsn := "postgres://postgres:coolpassword@localhost:5433/tmeeting?sslmode=disable"
-
+func NewEventRepository(dsn string) EventRepository {
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		log.Fatalf("pgx config: %v", err)
+		log.Fatalf("pgx config error: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -52,7 +49,7 @@ func NewEventRepository() EventRepository {
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
-		log.Fatalf("pgx connect: %v", err)
+		log.Fatalf("pgx connect error: %v", err)
 	}
 
 	if err := pool.Ping(ctx); err != nil {
