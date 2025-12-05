@@ -16,11 +16,11 @@ import (
 func main() {
 	cfg := config.MustLoad()
 	r := chi.NewRouter()
-	repo := repository.NewEventRepository(cfg.DBDSN())
+	repo := repository.NewEventRepository(cfg.DBDSN)
 	svc := service.NewEventService(repo)
 	route.Setup(r, svc)
 
-	addr := fmt.Sprintf(":%d", cfg.HTTP.Port)
+	addr := fmt.Sprintf(":%d", cfg.HTTPPort)
 	fmt.Printf("Listening on port %s...\n", addr)
 
 	if err := http.ListenAndServe(addr, r); err != nil {
