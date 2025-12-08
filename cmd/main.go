@@ -16,7 +16,7 @@ import (
 func main() {
 	cfg := config.MustLoad()
 	r := chi.NewRouter()
-	repo := repository.NewEventRepository(cfg.DBDSN)
+	repo := repository.NewEventRepository(cfg.DBDSN())
 	svc := service.NewEventService(repo)
 	route.Setup(r, svc)
 
