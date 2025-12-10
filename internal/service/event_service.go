@@ -33,7 +33,6 @@ func (es *eventService) Create(ctx context.Context, e *domain.Event) error {
 func (es *eventService) GetAll(ctx context.Context) ([]*domain.Event, error) {
 	return es.repo.GetAll(ctx)
 }
-
 func (es *eventService) GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error) {
 	e, err := es.repo.GetByID(ctx, id)
 	if err != nil {
@@ -48,7 +47,6 @@ func (es *eventService) GetByID(ctx context.Context, id uuid.UUID) (*domain.Even
 func (es *eventService) Update(ctx context.Context, id uuid.UUID, e *domain.Event) error {
 	return es.repo.Update(ctx, id, e)
 }
-
 func (es *eventService) Delete(ctx context.Context, id uuid.UUID) error {
 	return es.repo.Delete(ctx, id)
 }

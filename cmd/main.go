@@ -1,30 +1,29 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"t-meeting-backend/internal/repository"
+	"t-meeting-backend/internal/service"
+
+	"t-meeting-backend/internal/config"
 	"t-meeting-backend/internal/route"
-	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
+	cfg := config.MustLoad()
 	r := chi.NewRouter()
-	connString := "postgres://postgres:coolpassword@localhost:5433/tmeeting?sslmode=disable"
-	db, err := pgxpool.New(context.Background(), connString)
-	if err != nil {
-		panic(err)
+	repo := repository.NewEventRepository(cfg.DBDSN())
+	svc := service.NewEventService(repo)
+	route.Setup(r, svc)
+
+	addr := fmt.Sprintf(":%d", cfg.HTTPPort)
+	fmt.Printf("Listening on port %s...\n", addr)
+
+	if err := http.ListenAndServe(addr, r); err != nil {
+		log.Fatal(err)
 	}
-	timeout := 5 * time.Second
-
-	route.Setup(timeout, db, r)
-
-	port := 33
-	addr := fmt.Sprintf(":%d", port)
-	fmt.Printf("Listening on port %d...\n", port)
-	log.Fatal(http.ListenAndServe(addr, r))
 }
