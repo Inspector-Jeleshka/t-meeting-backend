@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"t-meeting-backend/internal/domain"
 	"time"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Контракт репозитория — его дергает юзкейс
 type EventRepository interface {
 	Create(ctx context.Context, e *domain.Event) error
 	GetAll(ctx context.Context) ([]*domain.Event, error)
@@ -28,42 +26,17 @@ type mapEventRepository struct {
 }
 
 // Реализация поверх постгре
-type pgxEventRepository struct {
+type PgxEventRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewMapEventRepository возвращает ин мемори реализацию.
-func NewMapEventRepository() EventRepository {
-	db := make(map[uuid.UUID]*domain.Event)
-	return &mapEventRepository{database: db}
-}
-
-func NewEventRepository(dsn string) EventRepository {
-	cfg, err := pgxpool.ParseConfig(dsn)
-	if err != nil {
-		log.Fatalf("pgx config error: %v", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	pool, err := pgxpool.NewWithConfig(ctx, cfg)
-	if err != nil {
-		log.Fatalf("pgx connect error: %v", err)
-	}
-
-	if err := pool.Ping(ctx); err != nil {
-		log.Fatalf("pgx ping: %v", err)
-	}
-
-	log.Println("Connected to postgres (repository)")
-
-	return &pgxEventRepository{pool: pool}
+func NewPgxEventRepository(pool *pgxpool.Pool) *PgxEventRepository {
+	return &PgxEventRepository{pool: pool}
 }
 
 // pgxEventRepository — работа с БД
 
-func (erep *pgxEventRepository) Create(ctx context.Context, e *domain.Event) error {
+func (erep *PgxEventRepository) Create(ctx context.Context, e *domain.Event) error {
 	id := uuid.New()
 	e.ID = id
 	if e.Status == "" {
@@ -90,7 +63,7 @@ func (erep *pgxEventRepository) Create(ctx context.Context, e *domain.Event) err
 	return err
 }
 
-func (erep *pgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, error) {
+func (erep *PgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -142,7 +115,7 @@ func (erep *pgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, er
 	return res, nil
 }
 
-func (erep *pgxEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error) {
+func (erep *PgxEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -182,7 +155,7 @@ func (erep *pgxEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*dom
 	return &e, nil
 }
 
-func (erep *pgxEventRepository) Update(ctx context.Context, id uuid.UUID, e *domain.Event) error {
+func (erep *PgxEventRepository) Update(ctx context.Context, id uuid.UUID, e *domain.Event) error {
 	metaBytes, err := json.Marshal(e.Metadata)
 	if err != nil {
 		return err
@@ -212,7 +185,7 @@ func (erep *pgxEventRepository) Update(ctx context.Context, id uuid.UUID, e *dom
 	return nil
 }
 
-func (erep *pgxEventRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (erep *PgxEventRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
