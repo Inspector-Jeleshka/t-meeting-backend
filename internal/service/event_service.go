@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"t-meeting-backend/internal/domain"
-	"t-meeting-backend/internal/repository"
 
 	"github.com/google/uuid"
 )
@@ -16,14 +15,20 @@ type EventService interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-type eventService struct {
-	repo repository.EventRepository
+type eventRepository interface {
+	Create(ctx context.Context, e *domain.Event) error
+	GetAll(ctx context.Context) ([]*domain.Event, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error)
+	Update(ctx context.Context, id uuid.UUID, e *domain.Event) error
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
-func NewEventService(eventRepository repository.EventRepository) EventService {
-	return &eventService{
-		repo: eventRepository,
-	}
+type eventService struct {
+	repo eventRepository
+}
+
+func NewEventService(repo eventRepository) EventService {
+	return &eventService{repo: repo}
 }
 
 func (es *eventService) Create(ctx context.Context, e *domain.Event) error {

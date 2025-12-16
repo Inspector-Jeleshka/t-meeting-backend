@@ -27,11 +27,11 @@ type mapEventRepository struct {
 
 // Реализация поверх постгре
 type PgxEventRepository struct {
-	pool *pgxpool.Pool
+	db *pgxpool.Pool
 }
 
-func NewPgxEventRepository(pool *pgxpool.Pool) *PgxEventRepository {
-	return &PgxEventRepository{pool: pool}
+func NewPgxEventRepository(db *pgxpool.Pool) *PgxEventRepository {
+	return &PgxEventRepository{db: db}
 }
 
 // pgxEventRepository — работа с БД
@@ -56,7 +56,7 @@ func (erep *PgxEventRepository) Create(ctx context.Context, e *domain.Event) err
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	_, err = erep.pool.Exec(ctx, `
+	_, err = erep.db.Exec(ctx, `
 		INSERT INTO events (id, name, metadata, content, status)
 		VALUES ($1, $2, $3::jsonb, $4::jsonb, COALESCE($5, 'draft'))
 	`, e.ID, e.Name, metaBytes, contentBytes, e.Status)
@@ -67,7 +67,7 @@ func (erep *PgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, er
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	rows, err := erep.pool.Query(ctx, `
+	rows, err := erep.db.Query(ctx, `
 		SELECT id, name, metadata, content, status, created_at, updated_at
 		FROM events
 		ORDER BY created_at DESC
@@ -125,7 +125,7 @@ func (erep *PgxEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*dom
 		contentBytes []byte
 	)
 
-	err := erep.pool.QueryRow(ctx, `
+	err := erep.db.QueryRow(ctx, `
 		SELECT id, name, metadata, content, status, created_at, updated_at
 		FROM events
 		WHERE id = $1
@@ -168,7 +168,7 @@ func (erep *PgxEventRepository) Update(ctx context.Context, id uuid.UUID, e *dom
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	cmdTag, err := erep.pool.Exec(ctx, `
+	cmdTag, err := erep.db.Exec(ctx, `
 		UPDATE events
 		SET name = $2,
 		    metadata = $3::jsonb,
@@ -189,7 +189,7 @@ func (erep *PgxEventRepository) Delete(ctx context.Context, id uuid.UUID) error 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	cmdTag, err := erep.pool.Exec(ctx, `DELETE FROM events WHERE id = $1`, id)
+	cmdTag, err := erep.db.Exec(ctx, `DELETE FROM events WHERE id = $1`, id)
 	if err != nil {
 		return err
 	}
