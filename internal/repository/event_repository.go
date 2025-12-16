@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"t-meeting-backend/internal/domain"
 	"time"
 
@@ -22,6 +23,7 @@ type EventRepository interface {
 
 // ин мемори реализация (для тестов)
 type mapEventRepository struct {
+	mu       sync.RWMutex
 	database map[uuid.UUID]*domain.Event
 }
 
@@ -202,14 +204,18 @@ func (erep *PgxEventRepository) Delete(ctx context.Context, id uuid.UUID) error 
 //
 // mapEventRepository — in-memory реализация
 
-func (m *mapEventRepository) Create(_ context.Context, e *domain.Event) error {
+func (m *mapEventRepository) Create(ctx context.Context, e *domain.Event) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	id := uuid.New()
 	e.ID = id
 	m.database[id] = e
 	return nil
 }
 
-func (m *mapEventRepository) GetAll(_ context.Context) ([]*domain.Event, error) {
+func (m *mapEventRepository) GetAll(ctx context.Context) ([]*domain.Event, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	res := make([]*domain.Event, 0, len(m.database))
 	for _, v := range m.database {
 		res = append(res, v)
@@ -217,7 +223,9 @@ func (m *mapEventRepository) GetAll(_ context.Context) ([]*domain.Event, error) 
 	return res, nil
 }
 
-func (m *mapEventRepository) GetByID(_ context.Context, id uuid.UUID) (*domain.Event, error) {
+func (m *mapEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	event, ok := m.database[id]
 	if !ok {
 		return nil, errors.New("мероприятие не найдено")
@@ -225,7 +233,9 @@ func (m *mapEventRepository) GetByID(_ context.Context, id uuid.UUID) (*domain.E
 	return event, nil
 }
 
-func (m *mapEventRepository) Update(_ context.Context, id uuid.UUID, e *domain.Event) error {
+func (m *mapEventRepository) Update(ctx context.Context, id uuid.UUID, e *domain.Event) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if _, ok := m.database[id]; !ok {
 		return errors.New("мероприятие не найдено")
 	}
@@ -234,7 +244,9 @@ func (m *mapEventRepository) Update(_ context.Context, id uuid.UUID, e *domain.E
 	return nil
 }
 
-func (m *mapEventRepository) Delete(_ context.Context, id uuid.UUID) error {
+func (m *mapEventRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	delete(m.database, id)
 	return nil
 }
