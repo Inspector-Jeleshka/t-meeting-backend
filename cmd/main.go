@@ -2,41 +2,22 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
-	"t-meeting-backend/internal/adapters/postgres"
+	"t-meeting-backend/internal/app"
 	"t-meeting-backend/internal/config"
-	"t-meeting-backend/internal/repository"
-	"t-meeting-backend/internal/route"
-	"t-meeting-backend/internal/service"
 )
 
 func main() {
 	cfg := config.MustLoad()
 
-	ctx := context.Background()
-
-	db, err := postgres.NewDB(ctx, cfg.DBDSN())
+	application, err := app.New(context.Background(), cfg)
 	if err != nil {
-		log.Fatalf("failed to init postgres: %v", err)
+		log.Fatalf("init app: %v", err)
 	}
-	defer db.Close()
+	defer application.Close()
 
-	r := chi.NewRouter()
-
-	eventRepo := repository.NewPgxEventRepository(db.Pool())
-	svc := service.NewEventService(eventRepo)
-
-	route.Setup(r, svc)
-
-	addr := fmt.Sprintf(":%d", cfg.HTTPPort)
-	fmt.Printf("Listening on port %s...\n", addr)
-
-	if err := http.ListenAndServe(addr, r); err != nil {
+	if err := application.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
