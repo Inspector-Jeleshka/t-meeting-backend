@@ -58,10 +58,7 @@ func (erep *PgxEventRepository) Create(ctx context.Context, e *domain.Event) err
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	_, err = erep.db.Exec(ctx, `
-		INSERT INTO events (id, name, metadata, content, status)
-		VALUES ($1, $2, $3::jsonb, $4::jsonb, COALESCE($5, 'draft'))
-	`, e.ID, e.Name, metaBytes, contentBytes, e.Status)
+	_, err = erep.db.Exec(ctx, qEventCreate, e.ID, e.Name, metaBytes, contentBytes, e.Status)
 	return err
 }
 
@@ -69,11 +66,7 @@ func (erep *PgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, er
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	rows, err := erep.db.Query(ctx, `
-		SELECT id, name, metadata, content, status, created_at, updated_at
-		FROM events
-		ORDER BY created_at DESC
-	`)
+	rows, err := erep.db.Query(ctx, qEventGetAll)
 	if err != nil {
 		return nil, err
 	}
@@ -127,11 +120,7 @@ func (erep *PgxEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*dom
 		contentBytes []byte
 	)
 
-	err := erep.db.QueryRow(ctx, `
-		SELECT id, name, metadata, content, status, created_at, updated_at
-		FROM events
-		WHERE id = $1
-	`, id).Scan(
+	err := erep.db.QueryRow(ctx, qEventGetByID, id).Scan(
 		&e.ID,
 		&e.Name,
 		&metaBytes,
@@ -170,14 +159,7 @@ func (erep *PgxEventRepository) Update(ctx context.Context, id uuid.UUID, e *dom
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	cmdTag, err := erep.db.Exec(ctx, `
-		UPDATE events
-		SET name = $2,
-		    metadata = $3::jsonb,
-		    content = $4::jsonb,
-		    status = $5
-		WHERE id = $1
-	`, id, e.Name, metaBytes, contentBytes, e.Status)
+	cmdTag, err := erep.db.Exec(ctx, qEventUpdate, id, e.Name, metaBytes, contentBytes, e.Status)
 	if err != nil {
 		return err
 	}
@@ -191,7 +173,7 @@ func (erep *PgxEventRepository) Delete(ctx context.Context, id uuid.UUID) error 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	cmdTag, err := erep.db.Exec(ctx, `DELETE FROM events WHERE id = $1`, id)
+	cmdTag, err := erep.db.Exec(ctx, qEventDelete, id)
 	if err != nil {
 		return err
 	}
