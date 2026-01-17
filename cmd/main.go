@@ -1,29 +1,23 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
-	"net/http"
-	"t-meeting-backend/internal/repository"
-	"t-meeting-backend/internal/service"
 
+	"t-meeting-backend/internal/app"
 	"t-meeting-backend/internal/config"
-	"t-meeting-backend/internal/route"
-
-	"github.com/go-chi/chi/v5"
 )
 
 func main() {
 	cfg := config.MustLoad()
-	r := chi.NewRouter()
-	repo := repository.NewEventRepository(cfg.DBDSN())
-	svc := service.NewEventService(repo)
-	route.Setup(r, svc)
 
-	addr := fmt.Sprintf(":%d", cfg.HTTPPort)
-	fmt.Printf("Listening on port %s...\n", addr)
+	application, err := app.New(context.Background(), cfg)
+	if err != nil {
+		log.Fatalf("init app: %v", err)
+	}
+	defer application.Close()
 
-	if err := http.ListenAndServe(addr, r); err != nil {
+	if err := application.Run(); err != nil {
 		log.Fatal(err)
 	}
 }

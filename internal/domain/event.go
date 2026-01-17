@@ -12,10 +12,18 @@ type Event struct {
 	Name      string         `json:"name"`
 	Metadata  EventMetadata  `json:"metadata"`
 	Content   []ContentBlock `json:"content"`
-	Status    string         `json:"status"` // "draft"/"published" и тд
+	Status    EventStatus    `json:"status"` // "draft"/"published" и тд
 	CreatedAt time.Time      `json:"created_at,omitempty"`
 	UpdatedAt time.Time      `json:"updated_at,omitempty"`
 }
+
+type EventStatus string
+
+const (
+	EventStatusDraft     EventStatus = "draft"
+	EventStatusPublished EventStatus = "published"
+	EventStatusArchived  EventStatus = "archived"
+)
 
 type EventMetadata struct {
 	Datetime time.Time `json:"datetime"`         // "2025-11-23T22:00:00Z"

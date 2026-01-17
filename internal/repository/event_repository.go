@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"sync"
 	"t-meeting-backend/internal/domain"
 	"time"
 
@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Контракт репозитория — его дергает юзкейс
 type EventRepository interface {
 	Create(ctx context.Context, e *domain.Event) error
 	GetAll(ctx context.Context) ([]*domain.Event, error)
@@ -24,46 +23,22 @@ type EventRepository interface {
 
 // ин мемори реализация (для тестов)
 type mapEventRepository struct {
+	mu       sync.RWMutex
 	database map[uuid.UUID]*domain.Event
 }
 
 // Реализация поверх постгре
-type pgxEventRepository struct {
-	pool *pgxpool.Pool
+type PgxEventRepository struct {
+	db *pgxpool.Pool
 }
 
-// NewMapEventRepository возвращает ин мемори реализацию.
-func NewMapEventRepository() EventRepository {
-	db := make(map[uuid.UUID]*domain.Event)
-	return &mapEventRepository{database: db}
-}
-
-func NewEventRepository(dsn string) EventRepository {
-	cfg, err := pgxpool.ParseConfig(dsn)
-	if err != nil {
-		log.Fatalf("pgx config error: %v", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	pool, err := pgxpool.NewWithConfig(ctx, cfg)
-	if err != nil {
-		log.Fatalf("pgx connect error: %v", err)
-	}
-
-	if err := pool.Ping(ctx); err != nil {
-		log.Fatalf("pgx ping: %v", err)
-	}
-
-	log.Println("Connected to postgres (repository)")
-
-	return &pgxEventRepository{pool: pool}
+func NewPgxEventRepository(db *pgxpool.Pool) *PgxEventRepository {
+	return &PgxEventRepository{db: db}
 }
 
 // pgxEventRepository — работа с БД
 
-func (erep *pgxEventRepository) Create(ctx context.Context, e *domain.Event) error {
+func (erep *PgxEventRepository) Create(ctx context.Context, e *domain.Event) error {
 	id := uuid.New()
 	e.ID = id
 	if e.Status == "" {
@@ -83,22 +58,15 @@ func (erep *pgxEventRepository) Create(ctx context.Context, e *domain.Event) err
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	_, err = erep.pool.Exec(ctx, `
-		INSERT INTO events (id, name, metadata, content, status)
-		VALUES ($1, $2, $3::jsonb, $4::jsonb, COALESCE($5, 'draft'))
-	`, e.ID, e.Name, metaBytes, contentBytes, e.Status)
+	_, err = erep.db.Exec(ctx, qEventCreate, e.ID, e.Name, metaBytes, contentBytes, e.Status)
 	return err
 }
 
-func (erep *pgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, error) {
+func (erep *PgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	rows, err := erep.pool.Query(ctx, `
-		SELECT id, name, metadata, content, status, created_at, updated_at
-		FROM events
-		ORDER BY created_at DESC
-	`)
+	rows, err := erep.db.Query(ctx, qEventGetAll)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +110,7 @@ func (erep *pgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, er
 	return res, nil
 }
 
-func (erep *pgxEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error) {
+func (erep *PgxEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -152,11 +120,7 @@ func (erep *pgxEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*dom
 		contentBytes []byte
 	)
 
-	err := erep.pool.QueryRow(ctx, `
-		SELECT id, name, metadata, content, status, created_at, updated_at
-		FROM events
-		WHERE id = $1
-	`, id).Scan(
+	err := erep.db.QueryRow(ctx, qEventGetByID, id).Scan(
 		&e.ID,
 		&e.Name,
 		&metaBytes,
@@ -182,7 +146,7 @@ func (erep *pgxEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*dom
 	return &e, nil
 }
 
-func (erep *pgxEventRepository) Update(ctx context.Context, id uuid.UUID, e *domain.Event) error {
+func (erep *PgxEventRepository) Update(ctx context.Context, id uuid.UUID, e *domain.Event) error {
 	metaBytes, err := json.Marshal(e.Metadata)
 	if err != nil {
 		return err
@@ -195,14 +159,7 @@ func (erep *pgxEventRepository) Update(ctx context.Context, id uuid.UUID, e *dom
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	cmdTag, err := erep.pool.Exec(ctx, `
-		UPDATE events
-		SET name = $2,
-		    metadata = $3::jsonb,
-		    content = $4::jsonb,
-		    status = $5
-		WHERE id = $1
-	`, id, e.Name, metaBytes, contentBytes, e.Status)
+	cmdTag, err := erep.db.Exec(ctx, qEventUpdate, id, e.Name, metaBytes, contentBytes, e.Status)
 	if err != nil {
 		return err
 	}
@@ -212,11 +169,11 @@ func (erep *pgxEventRepository) Update(ctx context.Context, id uuid.UUID, e *dom
 	return nil
 }
 
-func (erep *pgxEventRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (erep *PgxEventRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	cmdTag, err := erep.pool.Exec(ctx, `DELETE FROM events WHERE id = $1`, id)
+	cmdTag, err := erep.db.Exec(ctx, qEventDelete, id)
 	if err != nil {
 		return err
 	}
@@ -229,14 +186,18 @@ func (erep *pgxEventRepository) Delete(ctx context.Context, id uuid.UUID) error 
 //
 // mapEventRepository — in-memory реализация
 
-func (m *mapEventRepository) Create(_ context.Context, e *domain.Event) error {
+func (m *mapEventRepository) Create(ctx context.Context, e *domain.Event) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	id := uuid.New()
 	e.ID = id
 	m.database[id] = e
 	return nil
 }
 
-func (m *mapEventRepository) GetAll(_ context.Context) ([]*domain.Event, error) {
+func (m *mapEventRepository) GetAll(ctx context.Context) ([]*domain.Event, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	res := make([]*domain.Event, 0, len(m.database))
 	for _, v := range m.database {
 		res = append(res, v)
@@ -244,7 +205,9 @@ func (m *mapEventRepository) GetAll(_ context.Context) ([]*domain.Event, error) 
 	return res, nil
 }
 
-func (m *mapEventRepository) GetByID(_ context.Context, id uuid.UUID) (*domain.Event, error) {
+func (m *mapEventRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	event, ok := m.database[id]
 	if !ok {
 		return nil, errors.New("мероприятие не найдено")
@@ -252,7 +215,9 @@ func (m *mapEventRepository) GetByID(_ context.Context, id uuid.UUID) (*domain.E
 	return event, nil
 }
 
-func (m *mapEventRepository) Update(_ context.Context, id uuid.UUID, e *domain.Event) error {
+func (m *mapEventRepository) Update(ctx context.Context, id uuid.UUID, e *domain.Event) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if _, ok := m.database[id]; !ok {
 		return errors.New("мероприятие не найдено")
 	}
@@ -261,7 +226,9 @@ func (m *mapEventRepository) Update(_ context.Context, id uuid.UUID, e *domain.E
 	return nil
 }
 
-func (m *mapEventRepository) Delete(_ context.Context, id uuid.UUID) error {
+func (m *mapEventRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	delete(m.database, id)
 	return nil
 }
