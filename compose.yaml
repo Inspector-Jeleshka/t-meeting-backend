@@ -1,0 +1,37 @@
+services:
+  # Go приложение
+  app:
+    build: .
+    container_name: go-app
+    ports:
+      - "33:33"
+    depends_on:
+      - postgres
+    volumes:
+      - ./config.yml:/app/config.yml:ro
+    networks:
+      - app-network
+
+  # PostgreSQL
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    container_name: postgres-db
+    ports:
+      - "5432:5432"
+    volumes:
+      # Сохраняем данные БД
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=tmeeting
+      - POSTGRES_PASSWORD=coolpassword
+    networks:
+      - app-network
+
+volumes:
+  postgres-data:
+
+networks:
+  app-network:
+    driver: bridge
