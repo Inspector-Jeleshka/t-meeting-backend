@@ -21,3 +21,10 @@ func main() {
 		log.Fatal(err)
 	}
 }
+
+func init() {
+	cfg := config.MustLoad()
+	_, err := app.New(context.Background(), cfg)
+	if err != nil {
+	}
+}

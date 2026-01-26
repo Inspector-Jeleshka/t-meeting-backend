@@ -14,4 +14,4 @@ RUN go build -o /bin/server ./cmd
 EXPOSE 33
 
 # What the container should run when it is started.
-CMD ["./bin/server"]
+CMD ["/bin/server"]
