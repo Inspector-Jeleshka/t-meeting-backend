@@ -13,15 +13,16 @@ services:
     ports:
       - "33:33"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ./config.yml:/app/config.yml:ro
+    restart: on-failure:10
 
   # PostgreSQL
   db:
     image: postgres:18-alpine
     environment:
-      HTTP_PORT: "33"
       POSTGRES_DB: tmeeting
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: coolpassword
@@ -30,6 +31,13 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tmeeting"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
 
 volumes:
   db_data:

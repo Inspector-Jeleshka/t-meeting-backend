@@ -22,9 +22,10 @@ func main() {
 	}
 }
 
-func init() {
-	cfg := config.MustLoad()
-	_, err := app.New(context.Background(), cfg)
-	if err != nil {
-	}
-}
+//
+//func init() {
+//	cfg := config.MustLoad()
+//	_, err := app.New(context.Background(), cfg)
+//	if err != nil {
+//	}
+//}

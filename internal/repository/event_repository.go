@@ -33,6 +33,9 @@ type PgxEventRepository struct {
 }
 
 func NewPgxEventRepository(db *pgxpool.Pool) *PgxEventRepository {
+	if db == nil {
+		panic("NewPgxEventRepository: pgx pool is nil")
+	}
 	return &PgxEventRepository{db: db}
 }
 
