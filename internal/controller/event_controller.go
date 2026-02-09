@@ -89,7 +89,7 @@ func (c *EventController) GetEventById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ec *EventController) Update(w http.ResponseWriter, r *http.Request) {
-	eventID, err := uuid.Parse(r.PathValue("eventID"))
+	eventID, err := uuid.Parse(chi.URLParam(r, "eventID"))
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
@@ -122,7 +122,7 @@ func (ec *EventController) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ec *EventController) Delete(w http.ResponseWriter, r *http.Request) {
-	eventID, err := uuid.Parse(r.PathValue("eventID"))
+	eventID, err := uuid.Parse(chi.URLParam(r, "eventID"))
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
