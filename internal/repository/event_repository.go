@@ -75,7 +75,7 @@ func (erep *PgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, er
 	}
 	defer rows.Close()
 
-	var res []*domain.Event
+	res := make([]*domain.Event, 0)
 
 	for rows.Next() {
 		var (

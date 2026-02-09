@@ -19,26 +19,28 @@ func (ec *EventController) Create(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&event)
 	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		http.Error(w, "decode body: "+err.Error(), http.StatusBadRequest)
+		//http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
 	err = ec.Svc.Create(r.Context(), &event)
 	if err != nil {
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "create event: "+err.Error(), http.StatusBadRequest)
+		//http.Error(w, "", http.StatusBadRequest)
 		return
 	}
 
-	res, err := json.Marshal(event)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(res)
-	if err != nil {
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(event); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -48,17 +50,16 @@ func (ec *EventController) GetAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	res, err := json.Marshal(events)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if events == nil {
+		events = make([]*domain.Event, 0)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(res)
-	if err != nil {
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(events); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
