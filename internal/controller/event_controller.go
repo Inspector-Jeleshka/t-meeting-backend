@@ -31,17 +31,15 @@ func (ec *EventController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	created, err := ec.Svc.GetByID(r.Context(), event.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "get created event: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(event); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	_ = json.NewEncoder(w).Encode(created)
 }
 
 func (ec *EventController) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +77,7 @@ func (c *EventController) GetEventById(w http.ResponseWriter, r *http.Request) {
 	}
 	if e == nil {
 		http.Error(w, "Event not found", http.StatusNotFound)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -98,27 +97,30 @@ func (ec *EventController) Update(w http.ResponseWriter, r *http.Request) {
 	var event domain.Event
 	err = json.NewDecoder(r.Body).Decode(&event)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "decode body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	event.ID = eventID
 
 	err = ec.Svc.Update(r.Context(), eventID, &event)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "update event: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	res, err := json.Marshal(event)
+	updated, err := ec.Svc.GetByID(r.Context(), eventID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "get updated event"+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	if updated == nil {
+		http.Error(w, "Event not found", http.StatusNotFound)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(res)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	_ = json.NewEncoder(w).Encode(updated)
 }
 
 func (ec *EventController) Delete(w http.ResponseWriter, r *http.Request) {
