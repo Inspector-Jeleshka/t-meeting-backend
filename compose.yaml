@@ -1,0 +1,43 @@
+services:
+  # Go приложение
+  app:
+    build: .
+    container_name: go-app
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: tmeeting
+      DB_USER: postgres
+      DB_PASSWORD: coolpassword
+      HTTP_PORT: "33"
+    ports:
+      - "33:33"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./config.yml:/app/config.yml:ro
+    restart: on-failure:10
+
+  # PostgreSQL
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: tmeeting
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: coolpassword
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tmeeting"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  db_data:

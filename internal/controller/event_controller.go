@@ -19,27 +19,27 @@ func (ec *EventController) Create(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&event)
 	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		http.Error(w, "decode body: "+err.Error(), http.StatusBadRequest)
+		//http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
 	err = ec.Svc.Create(r.Context(), &event)
 	if err != nil {
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "create event: "+err.Error(), http.StatusBadRequest)
+		//http.Error(w, "", http.StatusBadRequest)
 		return
 	}
 
-	res, err := json.Marshal(event)
+	created, err := ec.Svc.GetByID(r.Context(), event.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "get created event: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(res)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(created)
 }
 
 func (ec *EventController) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -48,17 +48,16 @@ func (ec *EventController) GetAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	res, err := json.Marshal(events)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if events == nil {
+		events = make([]*domain.Event, 0)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(res)
-	if err != nil {
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(events); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -78,6 +77,7 @@ func (c *EventController) GetEventById(w http.ResponseWriter, r *http.Request) {
 	}
 	if e == nil {
 		http.Error(w, "Event not found", http.StatusNotFound)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -88,7 +88,7 @@ func (c *EventController) GetEventById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ec *EventController) Update(w http.ResponseWriter, r *http.Request) {
-	eventID, err := uuid.Parse(r.PathValue("eventID"))
+	eventID, err := uuid.Parse(chi.URLParam(r, "eventID"))
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
@@ -97,31 +97,34 @@ func (ec *EventController) Update(w http.ResponseWriter, r *http.Request) {
 	var event domain.Event
 	err = json.NewDecoder(r.Body).Decode(&event)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "decode body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	event.ID = eventID
 
 	err = ec.Svc.Update(r.Context(), eventID, &event)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "update event: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	res, err := json.Marshal(event)
+	updated, err := ec.Svc.GetByID(r.Context(), eventID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "get updated event"+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	if updated == nil {
+		http.Error(w, "Event not found", http.StatusNotFound)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(res)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	_ = json.NewEncoder(w).Encode(updated)
 }
 
 func (ec *EventController) Delete(w http.ResponseWriter, r *http.Request) {
-	eventID, err := uuid.Parse(r.PathValue("eventID"))
+	eventID, err := uuid.Parse(chi.URLParam(r, "eventID"))
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return

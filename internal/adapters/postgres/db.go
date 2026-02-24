@@ -23,14 +23,41 @@ func NewDB(ctx context.Context, dsn string) (*DB, error) {
 		return nil, fmt.Errorf("create postgres pool: %w", err)
 	}
 
-	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	// общий лимит на установление связи (чтобы не висеть вечно)
+	connectCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	if err := pool.Ping(pingCtx); err != nil {
-		pool.Close()
-		return nil, fmt.Errorf("ping postgres: %w", err)
+	const (
+		pingTimeout = 2 * time.Second
+		baseDelay   = 200 * time.Millisecond
+		maxDelay    = 2 * time.Second
+	)
+
+	var lastErr error
+	for attempt := 1; ; attempt++ {
+		pingCtx, cancelPing := context.WithTimeout(connectCtx, pingTimeout)
+		err = pool.Ping(pingCtx)
+		cancelPing()
+
+		if err == nil {
+			// успех)
+			return &DB{pool: pool}, nil
+		}
+
+		lastErr = err
+
+		// если общий таймаут вышел сдаемся
+		if connectCtx.Err() != nil {
+			pool.Close()
+			return nil, fmt.Errorf("ping postgres (attempts=%d): %w", attempt, lastErr)
+		}
+
+		delay := baseDelay * time.Duration(1<<(attempt-1))
+		if delay > maxDelay {
+			delay = maxDelay
+		}
+		time.Sleep(delay)
 	}
-	return &DB{pool: pool}, nil
 }
 
 func (db *DB) Pool() *pgxpool.Pool {

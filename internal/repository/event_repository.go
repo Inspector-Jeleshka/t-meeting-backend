@@ -33,6 +33,9 @@ type PgxEventRepository struct {
 }
 
 func NewPgxEventRepository(db *pgxpool.Pool) *PgxEventRepository {
+	if db == nil {
+		panic("NewPgxEventRepository: pgx pool is nil")
+	}
 	return &PgxEventRepository{db: db}
 }
 
@@ -72,7 +75,7 @@ func (erep *PgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, er
 	}
 	defer rows.Close()
 
-	var res []*domain.Event
+	res := make([]*domain.Event, 0)
 
 	for rows.Next() {
 		var (

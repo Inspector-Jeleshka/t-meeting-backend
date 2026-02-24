@@ -14,8 +14,8 @@ func NewEventRouter(router chi.Router, svc service.EventService) {
 	router.Post("/event", ec.Create)
 	router.Get("/events", ec.GetAll)
 	router.Route("/event/{eventID}", func(r chi.Router) {
-		router.Get("/", ec.GetEventById)
-		router.Put("/", ec.Update)
-		router.Delete("/", ec.Delete)
+		r.Get("/", ec.GetEventById)
+		r.Put("/", ec.Update)
+		r.Delete("/", ec.Delete)
 	})
 }
