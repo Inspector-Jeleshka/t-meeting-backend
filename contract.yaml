@@ -10,6 +10,8 @@ tags:
 servers:
   - url: http://localhost:33
     description: Local dev server
+security:
+  - BearerAuth: []
 paths:
   /event:
     post:
@@ -160,8 +162,74 @@ paths:
                     type: string
         '401':
           description: Некорректные данные пользователя
+  /auth/register:
+    post:
+      security: []
+      tags: [auth]
+      summary: Register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthCredentials'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /auth/login:
+    post:
+      security: []
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthCredentials'
+  /auth/refresh:
+    post:
+      security: []
+      tags: [auth]
+      summary: Refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Current user
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
+    Role:
+      type: string
+      enum: [admin, organizer, member, viewer]
     Id:
       type: string
       format: uuid
@@ -203,6 +271,7 @@ components:
           readOnly: true
     User:
       type: object
+      required: [id, email, role]
       properties:
         id:
           $ref: '#/components/schemas/Id'
@@ -215,6 +284,8 @@ components:
           type: string
           format: password
           description: Хешированный пароль
+        role:
+          $ref: '#/components/schemas/Role'
     EventMetadata:
       type: object
       properties:
@@ -287,6 +358,40 @@ components:
               time:
                 type: string
                 format: time
+    AuthCredentials:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+    TokenPair:
+      type: object
+      required: [access_token, refresh_token]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+    AuthResponse:
+      type: object
+      required: [access_token, refresh_token, user]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
   parameters:
     EventId:
       name: eventId
