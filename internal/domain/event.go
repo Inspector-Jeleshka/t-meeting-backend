@@ -7,6 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
+type NewEvent struct {
+	Name     string         `json:"name"`
+	Metadata EventMetadata  `json:"metadata"`
+	Content  []ContentBlock `json:"content"`
+	Status   EventStatus    `json:"status"`
+}
+
 type Event struct {
 	ID        uuid.UUID      `json:"id"`
 	Name      string         `json:"name"`
