@@ -276,20 +276,20 @@ components:
           const: map
         payload:
           type: object
-          required:
-            - longitude
-            - latitude
-            - title
           properties:
-            longitude:
-              type: number
-            latitude:
-              type: number
-            title:
+            background:
               type: string
-            icon:
-              type: string
-              format: uri
+            points:
+              type: array
+              items:
+                type: object
+                properties:
+                  x:
+                    type: number
+                  y:
+                    type: number
+                  text:
+                    type: string
     TimelineBlock:
       type: object
       properties:
