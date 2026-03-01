@@ -15,7 +15,7 @@ type EventController struct {
 }
 
 func (ec *EventController) Create(w http.ResponseWriter, r *http.Request) {
-	var event domain.Event
+	var event domain.NewEvent
 
 	err := json.NewDecoder(r.Body).Decode(&event)
 	if err != nil {
@@ -24,14 +24,14 @@ func (ec *EventController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = ec.Svc.Create(r.Context(), &event)
+	id, err := ec.Svc.Create(r.Context(), &event)
 	if err != nil {
 		http.Error(w, "create event: "+err.Error(), http.StatusBadRequest)
 		//http.Error(w, "", http.StatusBadRequest)
 		return
 	}
 
-	created, err := ec.Svc.GetByID(r.Context(), event.ID)
+	created, err := ec.Svc.GetByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, "get created event: "+err.Error(), http.StatusInternalServerError)
 		return

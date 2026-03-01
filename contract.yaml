@@ -22,7 +22,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Event'
+              $ref: '#/components/schemas/NewEvent'
       responses:
         '200':
           description: Успешная операция
@@ -167,6 +167,24 @@ components:
       format: uuid
       examples:
         - 5378afbf-e87b-411f-95df-b1aeeb5b770f
+    NewEvent:
+      type: object
+      required:
+        - name
+        - metadata
+        - content
+        - status
+      properties:
+        name:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/EventMetadata'
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentBlock'
+        status:
+          type: string
     Event:
       type: object
       required:
@@ -258,20 +276,20 @@ components:
           const: map
         payload:
           type: object
-          required:
-            - longitude
-            - latitude
-            - title
           properties:
-            longitude:
-              type: number
-            latitude:
-              type: number
-            title:
+            background:
               type: string
-            icon:
-              type: string
-              format: uri
+            points:
+              type: array
+              items:
+                type: object
+                properties:
+                  x:
+                    type: number
+                  y:
+                    type: number
+                  text:
+                    type: string
     TimelineBlock:
       type: object
       properties:

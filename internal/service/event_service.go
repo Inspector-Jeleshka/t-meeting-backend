@@ -8,7 +8,7 @@ import (
 )
 
 type EventService interface {
-	Create(ctx context.Context, e *domain.Event) error
+	Create(ctx context.Context, e *domain.NewEvent) (uuid.UUID, error)
 	GetAll(ctx context.Context) ([]*domain.Event, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error)
 	Update(ctx context.Context, id uuid.UUID, e *domain.Event) error
@@ -16,7 +16,7 @@ type EventService interface {
 }
 
 type eventRepository interface {
-	Create(ctx context.Context, e *domain.Event) error
+	Create(ctx context.Context, e *domain.NewEvent) (uuid.UUID, error)
 	GetAll(ctx context.Context) ([]*domain.Event, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error)
 	Update(ctx context.Context, id uuid.UUID, e *domain.Event) error
@@ -31,7 +31,7 @@ func NewEventService(repo eventRepository) EventService {
 	return &eventService{repo: repo}
 }
 
-func (es *eventService) Create(ctx context.Context, e *domain.Event) error {
+func (es *eventService) Create(ctx context.Context, e *domain.NewEvent) (uuid.UUID, error) {
 	return es.repo.Create(ctx, e)
 }
 

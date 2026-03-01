@@ -7,6 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
+type NewEvent struct {
+	Name     string         `json:"name"`
+	Metadata EventMetadata  `json:"metadata"`
+	Content  []ContentBlock `json:"content"`
+	Status   EventStatus    `json:"status"`
+}
+
 type Event struct {
 	ID        uuid.UUID      `json:"id"`
 	Name      string         `json:"name"`
@@ -38,11 +45,15 @@ type ContentBlock struct {
 
 type PromoTextPayload []string // promo-text когда нужен будет
 
+type Point struct {
+	X    float64 `json:"x"`
+	Y    float64 `json:"y"`
+	Text string  `json:"text"`
+}
+
 type MapPayload struct {
-	Longitude float64 `json:"longitude"` // map примерно так должен описываться, тоже потом пригодится
-	Latitude  float64 `json:"latitude"`
-	Title     string  `json:"title"`
-	Icon      string  `json:"icon"`
+	Background string  `json:"background"`
+	Points     []Point `json:"points"`
 }
 
 type TimelineItem struct { //легендарный таймлайн
