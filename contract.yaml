@@ -7,6 +7,8 @@ tags:
     description: Взаимодействие с мероприятием
   - name: user
     description: Взаимодействие с пользователем
+  - name: auth
+    description: Авторизация и токены
 servers:
   - url: http://localhost:33
     description: Local dev server
@@ -126,42 +128,6 @@ paths:
           description: Предоставлен некорректный Id
         '404':
           description: Пользователь не существует
-  /login:
-    post:
-      tags:
-        - user
-      summary: Войти в аккаунт
-      operationId: login
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-                  format: password
-      responses:
-        '200':
-          description: Успешная операция
-          headers:
-            X-Access-Expires-After:
-              description: Время окончания действия токена
-              schema:
-                type: string
-                format: time
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-        '401':
-          description: Некорректные данные пользователя
   /auth/register:
     post:
       security: []
@@ -185,12 +151,22 @@ paths:
       security: []
       tags: [auth]
       summary: Login
+      operationId: authLogin
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/AuthCredentials'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
   /auth/refresh:
     post:
       security: []
@@ -271,19 +247,13 @@ components:
           readOnly: true
     User:
       type: object
-      required: [id, email, role]
+      required: [email, role]
       properties:
-        id:
-          $ref: '#/components/schemas/Id'
         email:
           type: string
           format: email
           examples:
             - anyemail@gmail.com
-        password:
-          type: string
-          format: password
-          description: Хешированный пароль
         role:
           $ref: '#/components/schemas/Role'
     EventMetadata:
