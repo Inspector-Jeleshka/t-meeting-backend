@@ -41,28 +41,36 @@ func NewPgxEventRepository(db *pgxpool.Pool) *PgxEventRepository {
 
 // pgxEventRepository — работа с БД
 
-func (erep *PgxEventRepository) Create(ctx context.Context, e *domain.Event) error {
+func (erep *PgxEventRepository) Create(ctx context.Context, newEvent *domain.NewEvent) (uuid.UUID, error) {
 	id := uuid.New()
-	e.ID = id
+	e := &domain.Event{
+		ID:        id,
+		Name:      newEvent.Name,
+		Metadata:  newEvent.Metadata,
+		Content:   newEvent.Content,
+		Status:    newEvent.Status,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
 	if e.Status == "" {
 		e.Status = "draft"
 	}
 
 	metaBytes, err := json.Marshal(e.Metadata)
 	if err != nil {
-		return err
+		return uuid.UUID{}, err
 	}
 
 	contentBytes, err := json.Marshal(e.Content)
 	if err != nil {
-		return err
+		return uuid.UUID{}, err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	_, err = erep.db.Exec(ctx, qEventCreate, e.ID, e.Name, metaBytes, contentBytes, e.Status)
-	return err
+	return id, err
 }
 
 func (erep *PgxEventRepository) GetAll(ctx context.Context) ([]*domain.Event, error) {
