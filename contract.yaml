@@ -217,7 +217,6 @@ components:
         - name
         - metadata
         - content
-        - status
       properties:
         name:
           type: string

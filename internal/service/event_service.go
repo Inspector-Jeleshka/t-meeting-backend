@@ -41,10 +41,10 @@ func (es *eventService) GetAll(ctx context.Context) ([]*domain.Event, error) {
 func (es *eventService) GetByID(ctx context.Context, id uuid.UUID) (*domain.Event, error) {
 	e, err := es.repo.GetByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
 	if e == nil {
-		return nil, err
+		return nil, nil
 	}
 	return e, nil
 }
