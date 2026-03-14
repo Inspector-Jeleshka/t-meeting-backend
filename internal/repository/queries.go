@@ -16,3 +16,9 @@ var qEventUpdate string
 
 //go:embed sql/events/delete.sql
 var qEventDelete string
+
+//go:embed sql/users/create.sql
+var qUserCreate string
+
+//go:embed sql/users/get_by_email.sql
+var qUserGetByEmail string
