@@ -13,7 +13,7 @@ servers:
   - url: http://localhost:33
     description: Local dev server
 security:
-  - BearerAuth: []
+  - cookieAuth: []
 paths:
   /event:
     post:
@@ -107,7 +107,7 @@ paths:
         '400':
           description: Предоставлен некорректный Id
   /user:
-    get: gfdg
+    get:
       tags:
         - user
       summary: Получить данные пользователя
@@ -198,10 +198,10 @@ paths:
                 $ref: '#/components/schemas/User'
 components:
   securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
   schemas:
     Role:
       type: string
