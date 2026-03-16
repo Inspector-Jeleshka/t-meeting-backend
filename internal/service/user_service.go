@@ -14,6 +14,7 @@ import (
 type userRepository interface {
 	Create(ctx context.Context, user *domain.User) error
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 }
 
 var ErrUserAlreadyExists = errors.New("user already exists")
@@ -59,6 +60,23 @@ func (us *UserService) Register(ctx context.Context, credentials *dto.AuthCreden
 	return user, nil
 }
 
-//func (us *UserService) Login(ctx context.Context, user *domain.User) error {}
+func (us *UserService) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	return us.ur.GetByID(ctx, id)
+}
+
+func (us *UserService) Login(ctx context.Context, credentials *dto.AuthCredentials) (*domain.User, error) {
+	user, err := us.ur.GetByEmail(ctx, credentials.Email)
+	if err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return nil, domain.ErrInvalidCredentials
+		}
+		return nil, fmt.Errorf("get user by email: %w", err)
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(credentials.Password)); err != nil {
+		return nil, domain.ErrInvalidCredentials
+	}
+	return user, nil
+}
 
 //func (us *UserService) RefreshToken(ctx context.Context) {}
