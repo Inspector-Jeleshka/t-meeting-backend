@@ -5,6 +5,7 @@ import (
 	"errors"
 	"t-meeting-backend/internal/domain"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -33,6 +34,23 @@ func (ur *UserRepository) GetByEmail(ctx context.Context, email string) (*domain
 		&user.PasswordHash,
 		&user.Role,
 	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (ur *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	var user domain.User
+
+	err := ur.db.QueryRow(ctx, qUserGetByID, id).Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+		&user.Role)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrUserNotFound
