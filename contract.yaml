@@ -107,7 +107,7 @@ paths:
         '400':
           description: Предоставлен некорректный Id
   /user:
-    get:
+    get: gfdg
       tags:
         - user
       summary: Получить данные пользователя

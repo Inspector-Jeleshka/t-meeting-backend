@@ -33,12 +33,16 @@ func (us *UserService) Register(ctx context.Context, credentials *dto.AuthCreden
 		return nil, ErrUserAlreadyExists
 	}
 
+	if !errors.Is(err, domain.ErrUserNotFound) {
+		return nil, fmt.Errorf("get user by email: %w", err)
+	}
+
 	password, err := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
 	if err != nil {
 		// bcrypt.GenerateFromPassword возвращает два типа ошибок:
 		// Первые - клиентские ошибки (4xx) - ErrPasswordTooLong
 		// Вторые - внутренние ошибки сервера (5xx) - ErrUnexpectedEOF, CorruptInputError, KeySizeError
-		return nil, fmt.Errorf("generate hash from password %q: %w", password, err)
+		return nil, fmt.Errorf("generate password hash: %w", err)
 	}
 
 	id := uuid.New()
