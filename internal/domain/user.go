@@ -8,6 +8,7 @@ import (
 
 var ErrUserNotFound = errors.New("user not found")
 var ErrInvalidCredentials = errors.New("invalid user credentials")
+var ErrInvalidToken = errors.New("invalid token")
 
 type User struct {
 	ID           uuid.UUID
