@@ -130,9 +130,10 @@ paths:
           description: Пользователь не существует
   /auth/register:
     post:
+      tags:
+        - auth
+      summary: Зарегистрировать пользователя
       security: []
-      tags: [auth]
-      summary: Register
       requestBody:
         required: true
         content:
@@ -148,10 +149,11 @@ paths:
                 $ref: '#/components/schemas/AuthResponse'
   /auth/login:
     post:
-      security: []
-      tags: [auth]
-      summary: Login
+      tags:
+        - auth
+      summary: Авторизовать пользователя
       operationId: authLogin
+      security: []
       requestBody:
         required: true
         content:
@@ -169,9 +171,10 @@ paths:
           description: Invalid credentials
   /auth/refresh:
     post:
+      tags:
+        - auth
+      summary: Обновить токен
       security: []
-      tags: [auth]
-      summary: Refresh token
       requestBody:
         required: true
         content:
@@ -185,17 +188,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenPair'
-  /auth/me:
-    get:
-      tags: [auth]
-      summary: Current user
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
 components:
   securitySchemes:
     cookieAuth:
@@ -205,7 +197,11 @@ components:
   schemas:
     Role:
       type: string
-      enum: [admin, organizer, member, viewer]
+      enum:
+        - admin
+        - organizer
+        - member
+        - viewer
     Id:
       type: string
       format: uuid
@@ -264,7 +260,9 @@ components:
           readOnly: true
     User:
       type: object
-      required: [email, role]
+      required:
+        - email
+        - role
       properties:
         email:
           type: string
@@ -347,7 +345,9 @@ components:
                 format: time
     AuthCredentials:
       type: object
-      required: [email, password]
+      required:
+        - email
+        - password
       properties:
         email:
           type: string
@@ -357,7 +357,9 @@ components:
           minLength: 8
     TokenPair:
       type: object
-      required: [access_token, refresh_token]
+      required:
+        - access_token
+        - refresh_token
       properties:
         access_token:
           type: string
@@ -365,7 +367,10 @@ components:
           type: string
     AuthResponse:
       type: object
-      required: [access_token, refresh_token, user]
+      required:
+        - access_token
+        - refresh_token
+        - user
       properties:
         access_token:
           type: string
@@ -375,7 +380,8 @@ components:
           $ref: '#/components/schemas/User'
     RefreshRequest:
       type: object
-      required: [refresh_token]
+      required:
+        - refresh_token
       properties:
         refresh_token:
           type: string
