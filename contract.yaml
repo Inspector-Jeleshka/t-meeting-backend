@@ -142,11 +142,19 @@ paths:
               $ref: '#/components/schemas/AuthCredentials'
       responses:
         '201':
-          description: Created
+          description: Успешная операция
+          headers:
+            Set-Cookie:
+              description:
+                Пара access и refresh токенов, каждый в новом заголовке
+              schema:
+                $ref: '#/components/schemas/CookieToken'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Некорректный запрос
   /auth/login:
     post:
       tags:
@@ -162,32 +170,40 @@ paths:
               $ref: '#/components/schemas/AuthCredentials'
       responses:
         '200':
-          description: OK
+          description: Успешная операция
+          headers:
+            Set-Cookie:
+              description:
+                Пара access и refresh токенов, каждый в новом заголовке
+              schema:
+                $ref: '#/components/schemas/CookieToken'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                $ref: '#/components/schemas/User'
         '401':
-          description: Invalid credentials
+          description: Неверные учетные данные
   /auth/refresh:
     post:
       tags:
         - auth
       summary: Обновить токен
       security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshRequest'
+      parameters:
+        - name: refresh_token
+          in: cookie
+          schema:
+            $ref: '#/components/schemas/CookieToken'
+          required: true
       responses:
         '200':
-          description: OK
-          content:
-            application/json:
+          description: Успешная операция
+          headers:
+            Set-Cookie:
+              description:
+                Пара access и refresh токенов, каждый в новом заголовке
               schema:
-                $ref: '#/components/schemas/TokenPair'
+                $ref: '#/components/schemas/CookieToken'
 components:
   securitySchemes:
     cookieAuth:
@@ -385,6 +401,11 @@ components:
       properties:
         refresh_token:
           type: string
+    CookieToken:
+      type: string
+      examples:
+        - access_token=ab.cd12.34; Path=/; HttpOnly
+        - refresh_token=ef.gh56.78; Path=/; HttpOnly
   parameters:
     EventId:
       name: eventId
