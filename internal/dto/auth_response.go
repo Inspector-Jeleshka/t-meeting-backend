@@ -1,6 +1,6 @@
 package dto
 
-type UserResponse struct {
+type User struct {
 	Email string `json:"email"`
 	Role  string `json:"role"`
 }
@@ -11,9 +11,9 @@ type TokenPair struct {
 }
 
 type AuthResponse struct {
-	AccessToken  string       `json:"access_token"`
-	RefreshToken string       `json:"refresh_token"`
-	User         UserResponse `json:"user"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	User         User   `json:"user"`
 }
 
 type RefreshRequest struct {

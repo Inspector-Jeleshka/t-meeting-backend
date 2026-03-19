@@ -35,20 +35,31 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 	user, err := ac.us.Register(r.Context(), &credentials)
 	if err != nil {
 		if errors.Is(err, service.ErrUserAlreadyExists) {
-			http.Error(w, err.Error(), http.StatusConflict)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		http.Error(w, "register user: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	resp, err := ac.buildAuthResponse(user)
+	accessToken, err := ac.jwt.GenerateAccessToken(user)
 	if err != nil {
-		http.Error(w, "build auth response: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "generate access token: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+	refreshToken, err := ac.jwt.GenerateRefreshToken(user)
+	if err != nil {
+		http.Error(w, "generate refresh token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	resp := dto.User{
+		Email: user.Email,
+		Role:  user.Role,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Set-Cookie", "access_token="+accessToken+"; Path=/; HttpOnly")
+	w.Header().Add("Set-Cookie", "refresh_token="+refreshToken+"; Path=/; HttpOnly")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(resp)
 }
@@ -168,7 +179,7 @@ func (ac *AuthController) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(dto.UserResponse{
+	_ = json.NewEncoder(w).Encode(dto.User{
 		Email: user.Email,
 		Role:  user.Role,
 	})
@@ -188,7 +199,7 @@ func (ac *AuthController) buildAuthResponse(user *domain.User) (*dto.AuthRespons
 	return &dto.AuthResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		User: dto.UserResponse{
+		User: dto.User{
 			Email: user.Email,
 			Role:  user.Role,
 		},
