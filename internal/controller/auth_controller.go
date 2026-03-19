@@ -81,13 +81,24 @@ func (ac *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := ac.buildAuthResponse(user)
+	accessToken, err := ac.jwt.GenerateAccessToken(user)
 	if err != nil {
-		http.Error(w, "build auth response: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "generate access token: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+	refreshToken, err := ac.jwt.GenerateRefreshToken(user)
+	if err != nil {
+		http.Error(w, "generate refresh token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	resp := dto.User{
+		Email: user.Email,
+		Role:  user.Role,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Set-Cookie", "access_token="+accessToken+"; Path=/; HttpOnly")
+	w.Header().Add("Set-Cookie", "refresh_token="+refreshToken+"; Path=/; HttpOnly")
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
