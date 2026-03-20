@@ -57,9 +57,24 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 		Role:  user.Role,
 	}
 
+	accessTokenCookie := &http.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+	refreshTokeCookie := &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Set-Cookie", "access_token="+accessToken+"; Path=/; HttpOnly")
-	w.Header().Add("Set-Cookie", "refresh_token="+refreshToken+"; Path=/; HttpOnly")
+	http.SetCookie(w, accessTokenCookie)
+	http.SetCookie(w, refreshTokeCookie)
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(resp)
 }
@@ -96,9 +111,24 @@ func (ac *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		Role:  user.Role,
 	}
 
+	accessTokenCookie := &http.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+	refreshTokeCookie := &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Add("Set-Cookie", "access_token="+accessToken+"; Path=/; HttpOnly")
-	w.Header().Add("Set-Cookie", "refresh_token="+refreshToken+"; Path=/; HttpOnly")
+	http.SetCookie(w, accessTokenCookie)
+	http.SetCookie(w, refreshTokeCookie)
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
