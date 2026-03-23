@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/google/uuid"
 
@@ -133,13 +132,14 @@ func (ac *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ac *AuthController) Refresh(w http.ResponseWriter, r *http.Request) {
-	var req dto.RefreshRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "decode body: "+err.Error(), http.StatusBadRequest)
+	refreshToken, err := extractCookieToken(r, "refresh_token")
+	if err != nil {
+		http.Error(w, domain.ErrInvalidToken.Error(), http.StatusUnauthorized)
 		return
+
 	}
 
-	claims, err := ac.jwt.ParseToken(req.RefreshToken)
+	claims, err := ac.jwt.ParseToken(refreshToken)
 	if err != nil {
 		http.Error(w, domain.ErrInvalidToken.Error(), http.StatusUnauthorized)
 		return
@@ -159,40 +159,55 @@ func (ac *AuthController) Refresh(w http.ResponseWriter, r *http.Request) {
 	user, err := ac.us.GetByID(r.Context(), userID)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			http.Error(w, domain.ErrInvalidToken.Error(), http.StatusUnauthorized)
+			http.Error(w, domain.ErrUserNotFound.Error(), http.StatusNotFound)
 			return
 		}
 		http.Error(w, "get user by id: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	accessToken, err := ac.jwt.GenerateAccessToken(user)
+	newAccessToken, err := ac.jwt.GenerateAccessToken(user)
 	if err != nil {
 		http.Error(w, "generate access token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	refreshToken, err := ac.jwt.GenerateRefreshToken(user)
+	newRefreshToken, err := ac.jwt.GenerateRefreshToken(user)
 	if err != nil {
 		http.Error(w, "generate refresh token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(dto.TokenPair{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	})
+	accessTokenCookie := &http.Cookie{
+		Name:     "access_token",
+		Value:    newAccessToken,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+
+	refreshTokeCookie := &http.Cookie{
+		Name:     "refresh_token",
+		Value:    newRefreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+
+	http.SetCookie(w, accessTokenCookie)
+	http.SetCookie(w, refreshTokeCookie)
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (ac *AuthController) Me(w http.ResponseWriter, r *http.Request) {
-	tokenString, err := exctractBearerToken(r)
+	accessToken, err := extractCookieToken(r, "access_token")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		http.Error(w, domain.ErrInvalidToken.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	claims, err := ac.jwt.ParseToken(tokenString)
+	claims, err := ac.jwt.ParseToken(accessToken)
 	if err != nil {
 		http.Error(w, domain.ErrInvalidToken.Error(), http.StatusUnauthorized)
 		return
@@ -247,21 +262,15 @@ func (ac *AuthController) buildAuthResponse(user *domain.User) (*dto.AuthRespons
 	}, nil
 }
 
-func exctractBearerToken(r *http.Request) (string, error) {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
+func extractCookieToken(r *http.Request, cookieName string) (string, error) {
+	cookie, err := r.Cookie(cookieName)
+	if err != nil {
 		return "", domain.ErrInvalidToken
 	}
 
-	const prefix = "Bearer "
-	if !strings.HasPrefix(authHeader, prefix) {
+	if cookie.Value == "" {
 		return "", domain.ErrInvalidToken
 	}
 
-	token := strings.TrimPrefix(authHeader, prefix)
-	if token == "" {
-		return "", domain.ErrInvalidToken
-	}
-
-	return token, nil
+	return cookie.Value, nil
 }
