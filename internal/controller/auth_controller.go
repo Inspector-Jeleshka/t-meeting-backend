@@ -136,7 +136,6 @@ func (ac *AuthController) Refresh(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, domain.ErrInvalidToken.Error(), http.StatusUnauthorized)
 		return
-
 	}
 
 	claims, err := ac.jwt.ParseToken(refreshToken)
@@ -241,26 +240,6 @@ func (ac *AuthController) Me(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (ac *AuthController) buildAuthResponse(user *domain.User) (*dto.AuthResponse, error) {
-	accessToken, err := ac.jwt.GenerateAccessToken(user)
-	if err != nil {
-		return nil, err
-	}
-
-	refreshToken, err := ac.jwt.GenerateRefreshToken(user)
-	if err != nil {
-		return nil, err
-	}
-
-	return &dto.AuthResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		User: dto.User{
-			Email: user.Email,
-			Role:  user.Role,
-		},
-	}, nil
-}
 
 func extractCookieToken(r *http.Request, cookieName string) (string, error) {
 	cookie, err := r.Cookie(cookieName)
