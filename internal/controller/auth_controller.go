@@ -34,7 +34,7 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 	user, err := ac.us.Register(r.Context(), &credentials)
 	if err != nil {
 		if errors.Is(err, service.ErrUserAlreadyExists) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		}
 		http.Error(w, "register user: "+err.Error(), http.StatusInternalServerError)
@@ -56,25 +56,9 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 		Role:  user.Role,
 	}
 
-	accessTokenCookie := &http.Cookie{
-		Name:     "access_token",
-		Value:    accessToken,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	}
-	refreshTokeCookie := &http.Cookie{
-		Name:     "refresh_token",
-		Value:    refreshToken,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	http.SetCookie(w, accessTokenCookie)
-	http.SetCookie(w, refreshTokeCookie)
-	w.WriteHeader(http.StatusCreated)
+	setAuthCookies(w, accessToken, refreshToken)
+	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
@@ -110,24 +94,8 @@ func (ac *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		Role:  user.Role,
 	}
 
-	accessTokenCookie := &http.Cookie{
-		Name:     "access_token",
-		Value:    accessToken,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	}
-	refreshTokeCookie := &http.Cookie{
-		Name:     "refresh_token",
-		Value:    refreshToken,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	http.SetCookie(w, accessTokenCookie)
-	http.SetCookie(w, refreshTokeCookie)
+	setAuthCookies(w, accessToken, refreshToken)
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
@@ -158,7 +126,7 @@ func (ac *AuthController) Refresh(w http.ResponseWriter, r *http.Request) {
 	user, err := ac.us.GetByID(r.Context(), userID)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			http.Error(w, domain.ErrUserNotFound.Error(), http.StatusNotFound)
+			http.Error(w, domain.ErrUserNotFound.Error(), http.StatusUnauthorized)
 			return
 		}
 		http.Error(w, "get user by id: "+err.Error(), http.StatusInternalServerError)
@@ -177,25 +145,7 @@ func (ac *AuthController) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessTokenCookie := &http.Cookie{
-		Name:     "access_token",
-		Value:    newAccessToken,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	}
-
-	refreshTokeCookie := &http.Cookie{
-		Name:     "refresh_token",
-		Value:    newRefreshToken,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	}
-
-	http.SetCookie(w, accessTokenCookie)
-	http.SetCookie(w, refreshTokeCookie)
-
+	setAuthCookies(w, newAccessToken, newRefreshToken)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -251,6 +201,11 @@ func extractCookieToken(r *http.Request, cookieName string) (string, error) {
 	}
 
 	return cookie.Value, nil
+}
+
+func (ac *AuthController) Logout(w http.ResponseWriter, r *http.Request) {
+	clearAuthCookies(w)
+	w.WriteHeader(http.StatusOK)
 }
 
 func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string) {
