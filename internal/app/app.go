@@ -6,13 +6,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"t-meeting-backend/internal/adapters/postgres"
 	"t-meeting-backend/internal/config"
 	"t-meeting-backend/internal/controller"
 	"t-meeting-backend/internal/repository"
 	"t-meeting-backend/internal/route"
 	"t-meeting-backend/internal/service"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 )
 
 type App struct {
@@ -28,6 +30,15 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	}
 
 	r := chi.NewRouter()
+
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000", "https://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+
 	//events
 	eventRepo := repository.NewPgxEventRepository(db.Pool())
 	eventSvc := service.NewEventService(eventRepo)
