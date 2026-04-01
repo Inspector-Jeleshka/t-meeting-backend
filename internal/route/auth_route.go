@@ -1,17 +1,23 @@
 package route
 
 import (
+	"t-meeting-backend/internal/service"
+
 	"github.com/go-chi/chi/v5"
 
 	"t-meeting-backend/internal/controller"
+	"t-meeting-backend/internal/middleware"
 )
 
-func SetupAuthRoutes(r chi.Router, AuthController *controller.AuthController) {
+func SetupAuthRoutes(r chi.Router, authController *controller.AuthController, jwtService *service.JWTService) {
 	r.Route("/auth", func(r chi.Router) {
-		r.Post("/register", AuthController.Register)
-		r.Post("/login", AuthController.Login)
-		r.Post("/refresh", AuthController.Refresh)
-		r.Post("/logout", AuthController.Logout)
-		r.Get("/me", AuthController.Me)
+		r.Post("/register", authController.Register)
+		r.Post("/login", authController.Login)
+	})
+
+	r.Route("", func(r chi.Router) {
+		r.Use(middleware.JWTVerifier(jwtService))
+		r.Get("/user", authController.Me)
+		r.Post("/auth/refresh", authController.Refresh)
 	})
 }

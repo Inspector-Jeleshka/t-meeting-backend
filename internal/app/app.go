@@ -39,11 +39,6 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 		MaxAge:           300,
 	}))
 
-	//events
-	eventRepo := repository.NewPgxEventRepository(db.Pool())
-	eventSvc := service.NewEventService(eventRepo)
-	route.Setup(r, eventSvc)
-
 	// users/auth
 	userRepo, err := repository.NewUserRepository(db.Pool())
 	if err != nil {
@@ -58,8 +53,13 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 		7*24*time.Hour,
 	)
 
+	//events
+	eventRepo := repository.NewPgxEventRepository(db.Pool())
+	eventSvc := service.NewEventService(eventRepo)
+	route.Setup(r, eventSvc, jwtSvc)
+
 	authController := controller.NewAuthController(userSvc, jwtSvc)
-	route.SetupAuthRoutes(r, authController)
+	route.SetupAuthRoutes(r, authController, jwtSvc)
 
 	return &App{
 		cfg:    cfg,
