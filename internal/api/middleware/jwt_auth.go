@@ -3,11 +3,11 @@ package middleware
 import (
 	"net/http"
 	"t-meeting-backend/internal/domain"
-	"t-meeting-backend/internal/service"
+	"t-meeting-backend/internal/jwt"
 	"time"
 )
 
-func JWTVerifier(jwtService *service.JWTService) func(http.Handler) http.Handler {
+func JWTVerifier(jwtManager *jwt.JWTManager) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		verifier := func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie("access_token")
@@ -15,7 +15,7 @@ func JWTVerifier(jwtService *service.JWTService) func(http.Handler) http.Handler
 				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return
 			}
-			claims, err := jwtService.ParseToken(cookie.Value)
+			claims, err := jwtManager.ParseToken(cookie.Value)
 			if err != nil {
 				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return

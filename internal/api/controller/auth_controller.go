@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	dto2 "t-meeting-backend/internal/api/dto"
+	"t-meeting-backend/internal/jwt"
 
 	"github.com/google/uuid"
 
@@ -14,10 +15,10 @@ import (
 
 type AuthController struct {
 	us  *service.UserService
-	jwt *service.JWTService
+	jwt *jwt.JWTManager
 }
 
-func NewAuthController(us *service.UserService, jwt *service.JWTService) *AuthController {
+func NewAuthController(us *service.UserService, jwt *jwt.JWTManager) *AuthController {
 	return &AuthController{
 		us:  us,
 		jwt: jwt,
@@ -112,7 +113,7 @@ func (ac *AuthController) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if claims.Type != service.TokenTypeRefresh {
+	if claims.Type != jwt.TokenTypeRefresh {
 		http.Error(w, domain.ErrInvalidToken.Error(), http.StatusUnauthorized)
 		return
 	}
@@ -162,7 +163,7 @@ func (ac *AuthController) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if claims.Type != service.TokenTypeAccess {
+	if claims.Type != jwt.TokenTypeAccess {
 		http.Error(w, domain.ErrInvalidToken.Error(), http.StatusUnauthorized)
 		return
 	}

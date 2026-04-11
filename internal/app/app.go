@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"t-meeting-backend/internal/api/controller"
 	"t-meeting-backend/internal/api/route"
+	"t-meeting-backend/internal/jwt"
 	"time"
 
 	"t-meeting-backend/internal/adapters/postgres"
@@ -35,7 +36,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	eventSvc := service.NewEventService(eventRepo)
 	eventController := controller.EventController{Svc: eventSvc}
 
-	jwtSvc := service.NewJWTService(
+	jwtSvc := jwt.NewJWTManager(
 		"dev-secret-change-me",
 		15*time.Minute,
 		7*24*time.Hour,

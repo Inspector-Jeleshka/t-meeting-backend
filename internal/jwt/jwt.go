@@ -1,10 +1,11 @@
-package service
+package jwt
 
 import (
 	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 
 	"t-meeting-backend/internal/domain"
 )
@@ -20,21 +21,21 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-type JWTService struct {
+type JWTManager struct {
 	secret     []byte
 	accessTTL  time.Duration
 	refreshTTL time.Duration
 }
 
-func NewJWTService(secret string, accessTTL, refreshTTL time.Duration) *JWTService {
-	return &JWTService{
+func NewJWTManager(secret string, accessTTL, refreshTTL time.Duration) *JWTManager {
+	return &JWTManager{
 		secret:     []byte(secret),
 		accessTTL:  accessTTL,
 		refreshTTL: refreshTTL,
 	}
 }
 
-func (js *JWTService) GenerateAccessToken(user *domain.User) (string, error) {
+func (js *JWTManager) GenerateAccessToken(user *domain.User) (string, error) {
 	now := time.Now()
 
 	claims := Claims{
@@ -56,7 +57,7 @@ func (js *JWTService) GenerateAccessToken(user *domain.User) (string, error) {
 	return signedToken, nil
 }
 
-func (js *JWTService) GenerateRefreshToken(user *domain.User) (string, error) {
+func (js *JWTManager) GenerateRefreshToken(user *domain.User) (string, error) {
 	now := time.Now()
 
 	claims := Claims{
@@ -77,7 +78,7 @@ func (js *JWTService) GenerateRefreshToken(user *domain.User) (string, error) {
 	return signedToken, nil
 }
 
-func (js *JWTService) ParseToken(tokenString string) (*Claims, error) {
+func (js *JWTManager) ParseToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if token.Method != jwt.SigningMethodHS256 {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Method.Alg())
@@ -93,4 +94,26 @@ func (js *JWTService) ParseToken(tokenString string) (*Claims, error) {
 		return nil, domain.ErrInvalidToken
 	}
 	return claims, nil
+}
+
+func (js *JWTManager) UserID(tokenString string) (uuid.UUID, error) {
+	claims, err := js.ParseToken(tokenString)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	userID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("parse user id: %w", err)
+	}
+	return userID, nil
+}
+
+func (js *JWTManager) UserRole(tokenString string) (string, error) {
+	claims, err := js.ParseToken(tokenString)
+	if err != nil {
+		return "", err
+	}
+
+	return claims.Role, nil
 }
