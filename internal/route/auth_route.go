@@ -15,7 +15,7 @@ func SetupAuthRoutes(r chi.Router, authController *controller.AuthController, jw
 		r.Post("/login", authController.Login)
 	})
 
-	r.Route("", func(r chi.Router) {
+	r.Group(func(r chi.Router) {
 		r.Use(middleware.JWTVerifier(jwtService))
 		r.Get("/user", authController.Me)
 		r.Post("/auth/refresh", authController.Refresh)

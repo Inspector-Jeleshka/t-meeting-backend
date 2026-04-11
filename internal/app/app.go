@@ -24,13 +24,33 @@ type App struct {
 }
 
 func New(ctx context.Context, cfg *config.Config) (*App, error) {
+	// db setup
 	db, err := postgres.NewDB(ctx, cfg.DBDSN())
 	if err != nil {
 		return nil, err
 	}
 
-	r := chi.NewRouter()
+	// events setup
+	eventRepo := repository.NewPgxEventRepository(db.Pool())
+	eventSvc := service.NewEventService(eventRepo)
+	eventController := controller.EventController{Svc: eventSvc}
 
+	jwtSvc := service.NewJWTService(
+		"dev-secret-change-me",
+		15*time.Minute,
+		7*24*time.Hour,
+	)
+
+	// users/auth setup
+	userRepo, err := repository.NewUserRepository(db.Pool())
+	if err != nil {
+		return nil, fmt.Errorf("new user repository: %w", err)
+	}
+	userSvc := service.NewUserService(userRepo)
+	authController := controller.NewAuthController(userSvc, jwtSvc)
+
+	// router setup
+	r := chi.NewRouter()
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000", "https://localhost:3000"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -39,26 +59,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 		MaxAge:           300,
 	}))
 
-	// users/auth
-	userRepo, err := repository.NewUserRepository(db.Pool())
-	if err != nil {
-		return nil, fmt.Errorf("new user repository: %w", err)
-	}
-
-	userSvc := service.NewUserService(userRepo)
-
-	jwtSvc := service.NewJWTService(
-		"dev-secret-change-me",
-		15*time.Minute,
-		7*24*time.Hour,
-	)
-
-	//events
-	eventRepo := repository.NewPgxEventRepository(db.Pool())
-	eventSvc := service.NewEventService(eventRepo)
-	route.Setup(r, eventSvc, jwtSvc)
-
-	authController := controller.NewAuthController(userSvc, jwtSvc)
+	route.NewEventRouter(r, eventController, jwtSvc)
 	route.SetupAuthRoutes(r, authController, jwtSvc)
 
 	return &App{
