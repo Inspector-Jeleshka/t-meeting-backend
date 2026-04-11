@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"t-meeting-backend/internal/api/controller"
+	"t-meeting-backend/internal/api/route"
 	"time"
 
 	"t-meeting-backend/internal/adapters/postgres"
 	"t-meeting-backend/internal/config"
-	"t-meeting-backend/internal/controller"
 	"t-meeting-backend/internal/repository"
-	"t-meeting-backend/internal/route"
 	"t-meeting-backend/internal/service"
 
 	"github.com/go-chi/chi/v5"

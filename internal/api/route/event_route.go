@@ -1,8 +1,8 @@
 package route
 
 import (
-	"t-meeting-backend/internal/controller"
-	"t-meeting-backend/internal/middleware"
+	"t-meeting-backend/internal/api/controller"
+	"t-meeting-backend/internal/api/middleware"
 	"t-meeting-backend/internal/service"
 
 	"github.com/go-chi/chi/v5"

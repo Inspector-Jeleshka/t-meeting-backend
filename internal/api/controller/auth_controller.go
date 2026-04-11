@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	dto2 "t-meeting-backend/internal/api/dto"
 
 	"github.com/google/uuid"
 
 	"t-meeting-backend/internal/domain"
-	"t-meeting-backend/internal/dto"
 	"t-meeting-backend/internal/service"
 )
 
@@ -25,7 +25,7 @@ func NewAuthController(us *service.UserService, jwt *service.JWTService) *AuthCo
 }
 
 func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
-	var credentials dto.AuthCredentials
+	var credentials dto2.AuthCredentials
 	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
 		http.Error(w, "decode body: "+err.Error(), http.StatusBadRequest)
 		return
@@ -51,7 +51,7 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "generate refresh token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	resp := dto.User{
+	resp := dto2.User{
 		Email: user.Email,
 		Role:  user.Role,
 	}
@@ -63,7 +63,7 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ac *AuthController) Login(w http.ResponseWriter, r *http.Request) {
-	var credentials dto.AuthCredentials
+	var credentials dto2.AuthCredentials
 	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
 		http.Error(w, "decode body: "+err.Error(), http.StatusBadRequest)
 		return
@@ -89,7 +89,7 @@ func (ac *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "generate refresh token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	resp := dto.User{
+	resp := dto2.User{
 		Email: user.Email,
 		Role:  user.Role,
 	}
@@ -184,7 +184,7 @@ func (ac *AuthController) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(dto.User{
+	_ = json.NewEncoder(w).Encode(dto2.User{
 		Email: user.Email,
 		Role:  user.Role,
 	})

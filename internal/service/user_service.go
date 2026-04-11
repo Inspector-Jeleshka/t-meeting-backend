@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"t-meeting-backend/internal/api/dto"
 	"t-meeting-backend/internal/domain"
-	"t-meeting-backend/internal/dto"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
