@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"t-meeting-backend/internal/api/dto"
 	"t-meeting-backend/internal/domain"
 
 	"github.com/google/uuid"
@@ -27,9 +26,9 @@ func NewUserService(ur userRepository) *UserService {
 	return &UserService{ur: ur}
 }
 
-func (us *UserService) Register(ctx context.Context, credentials *dto.AuthCredentials) (*domain.User, error) {
+func (us *UserService) Register(ctx context.Context, email, password string) (*domain.User, error) {
 	// Проверка: зарегистрирован ли уже пользователь с этим email
-	_, err := us.ur.GetByEmail(ctx, credentials.Email)
+	_, err := us.ur.GetByEmail(ctx, email)
 	if err == nil {
 		return nil, ErrUserAlreadyExists
 	}
@@ -38,7 +37,7 @@ func (us *UserService) Register(ctx context.Context, credentials *dto.AuthCreden
 		return nil, fmt.Errorf("get user by email: %w", err)
 	}
 
-	password, err := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		// bcrypt.GenerateFromPassword возвращает два типа ошибок:
 		// Первые - клиентские ошибки (4xx) - ErrPasswordTooLong
@@ -50,8 +49,8 @@ func (us *UserService) Register(ctx context.Context, credentials *dto.AuthCreden
 	role := domain.AdminRole
 	user := &domain.User{
 		ID:           id,
-		Email:        credentials.Email,
-		PasswordHash: string(password),
+		Email:        email,
+		PasswordHash: string(passwordHash),
 		Role:         role,
 	}
 	if err = us.ur.Create(ctx, user); err != nil {
@@ -64,8 +63,8 @@ func (us *UserService) GetByID(ctx context.Context, id uuid.UUID) (*domain.User,
 	return us.ur.GetByID(ctx, id)
 }
 
-func (us *UserService) Login(ctx context.Context, credentials *dto.AuthCredentials) (*domain.User, error) {
-	user, err := us.ur.GetByEmail(ctx, credentials.Email)
+func (us *UserService) Login(ctx context.Context, email, password string) (*domain.User, error) {
+	user, err := us.ur.GetByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			return nil, domain.ErrInvalidCredentials
@@ -73,10 +72,8 @@ func (us *UserService) Login(ctx context.Context, credentials *dto.AuthCredentia
 		return nil, fmt.Errorf("get user by email: %w", err)
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(credentials.Password)); err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		return nil, domain.ErrInvalidCredentials
 	}
 	return user, nil
 }
-
-//func (us *UserService) RefreshToken(ctx context.Context) {}

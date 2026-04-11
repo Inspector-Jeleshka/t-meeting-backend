@@ -32,7 +32,7 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := ac.us.Register(r.Context(), &credentials)
+	user, err := ac.us.Register(r.Context(), credentials.Email, credentials.Password)
 	if err != nil {
 		if errors.Is(err, service.ErrUserAlreadyExists) {
 			http.Error(w, err.Error(), http.StatusConflict)
@@ -70,7 +70,7 @@ func (ac *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := ac.us.Login(r.Context(), &credentials)
+	user, err := ac.us.Login(r.Context(), credentials.Email, credentials.Password)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidCredentials) {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
