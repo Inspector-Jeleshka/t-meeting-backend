@@ -12,7 +12,7 @@ create table if not exists events (
     content    jsonb not null,
     status     text not null default 'draft',
     created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
+    updated_at timestamptz not null default  now()
 );
 
 drop trigger if exists trg_events_updated_at on events;

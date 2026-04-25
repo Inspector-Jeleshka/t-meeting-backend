@@ -17,7 +17,7 @@ const (
 
 type Claims struct {
 	Role string `json:"role,omitempty"`
-	Type string `json:"typ"`
+	Type string `json:"type"`
 	jwt.RegisteredClaims
 }
 

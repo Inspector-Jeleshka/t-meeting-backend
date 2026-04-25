@@ -16,8 +16,6 @@ type userRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 }
 
-var ErrUserAlreadyExists = errors.New("user already exists")
-
 type UserService struct {
 	ur userRepository
 }
@@ -30,7 +28,7 @@ func (us *UserService) Register(ctx context.Context, email, password string) (*d
 	// Проверка: зарегистрирован ли уже пользователь с этим email
 	_, err := us.ur.GetByEmail(ctx, email)
 	if err == nil {
-		return nil, ErrUserAlreadyExists
+		return nil, domain.ErrUserAlreadyExists
 	}
 
 	if !errors.Is(err, domain.ErrUserNotFound) {

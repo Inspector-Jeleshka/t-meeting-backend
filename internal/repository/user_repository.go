@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"t-meeting-backend/internal/domain"
 
 	"github.com/google/uuid"
@@ -22,8 +23,15 @@ func NewUserRepository(db *pgxpool.Pool) (*UserRepository, error) {
 }
 
 func (ur *UserRepository) Create(ctx context.Context, user *domain.User) error {
-	_, err := ur.db.Exec(ctx, qUserCreate, user.ID, user.Email, user.PasswordHash, user.Role)
-	return err
+	commandTag, err := ur.db.Exec(ctx, qUserCreate, user.ID, user.Email, user.PasswordHash, user.Role)
+	if err != nil {
+		return fmt.Errorf("create user: %w", err)
+	}
+
+	if commandTag.RowsAffected() != 1 {
+		return fmt.Errorf("%w: rows affected = %d", domain.ErrUserNotCreated, commandTag.RowsAffected())
+	}
+	return nil
 }
 
 func (ur *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {

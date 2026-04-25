@@ -34,7 +34,7 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 
 	user, err := ac.us.Register(r.Context(), credentials.Email, credentials.Password)
 	if err != nil {
-		if errors.Is(err, service.ErrUserAlreadyExists) {
+		if errors.Is(err, domain.ErrUserAlreadyExists) {
 			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		}
