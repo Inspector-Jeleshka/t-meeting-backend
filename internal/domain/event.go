@@ -39,21 +39,22 @@ type EventMetadata struct {
 }
 
 type ContentBlock struct {
-	Block   string          `json:"block"`   // "promo-text"/"map"/"timeline"
+	Block   string          `json:"block"`   // "promo-text"/"interactive-points"
 	Payload json.RawMessage `json:"payload"` // json, чтобы уходил в бд как есть. Если захотим распарсим в другое
 }
 
 type PromoTextPayload []string // promo-text когда нужен будет
 
-type Point struct {
-	X    float64 `json:"x"`
-	Y    float64 `json:"y"`
-	Text string  `json:"text"`
+type InteractivePoint struct {
+	X        float64        `json:"x"`
+	Y        float64        `json:"y"`
+	Text     string         `json:"text"`
+	Timeline []TimelineItem `json:"timeline,omitempty"`
 }
 
-type MapPayload struct {
-	Background string  `json:"background"`
-	Points     []Point `json:"points"`
+type InteractivePointsPayload struct {
+	Background string             `json:"background"`
+	Points     []InteractivePoint `json:"points"`
 }
 
 type TimelineItem struct { //легендарный таймлайн

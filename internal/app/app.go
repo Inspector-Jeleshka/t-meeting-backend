@@ -4,14 +4,18 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-
-	"github.com/go-chi/chi/v5"
+	"t-meeting-backend/internal/api/controller"
+	"t-meeting-backend/internal/api/route"
+	"t-meeting-backend/internal/jwt"
+	"time"
 
 	"t-meeting-backend/internal/adapters/postgres"
 	"t-meeting-backend/internal/config"
 	"t-meeting-backend/internal/repository"
-	"t-meeting-backend/internal/route"
 	"t-meeting-backend/internal/service"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 )
 
 type App struct {
@@ -21,17 +25,43 @@ type App struct {
 }
 
 func New(ctx context.Context, cfg *config.Config) (*App, error) {
+	// db setup
 	db, err := postgres.NewDB(ctx, cfg.DBDSN())
 	if err != nil {
 		return nil, err
 	}
 
-	r := chi.NewRouter()
-
+	// events setup
 	eventRepo := repository.NewPgxEventRepository(db.Pool())
 	eventSvc := service.NewEventService(eventRepo)
+	eventController := controller.EventController{Svc: eventSvc}
 
-	route.Setup(r, eventSvc)
+	jwtSvc := jwt.NewJWTManager(
+		"dev-secret-change-me",
+		15*time.Minute,
+		7*24*time.Hour,
+	)
+
+	// users/auth setup
+	userRepo, err := repository.NewUserRepository(db.Pool())
+	if err != nil {
+		return nil, fmt.Errorf("new user repository: %w", err)
+	}
+	userSvc := service.NewUserService(userRepo)
+	authController := controller.NewAuthController(userSvc, jwtSvc)
+
+	// router setup
+	r := chi.NewRouter()
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000", "https://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+
+	route.NewEventRouter(r, eventController, jwtSvc)
+	route.SetupAuthRoutes(r, authController, jwtSvc)
 
 	return &App{
 		cfg:    cfg,

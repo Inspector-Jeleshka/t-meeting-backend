@@ -43,9 +43,6 @@ func (es *eventService) GetByID(ctx context.Context, id uuid.UUID) (*domain.Even
 	if err != nil {
 		return nil, err
 	}
-	if e == nil {
-		return nil, err
-	}
 	return e, nil
 }
 
