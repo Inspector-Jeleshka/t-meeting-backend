@@ -113,7 +113,7 @@ func (ac *AuthController) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if claims.Type != jwt.TokenTypeRefresh {
+	if claims.Type != jwt.RefreshToken {
 		http.Error(w, domain.ErrInvalidToken.Error(), http.StatusUnauthorized)
 		return
 	}
@@ -163,7 +163,7 @@ func (ac *AuthController) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if claims.Type != jwt.TokenTypeAccess {
+	if claims.Type != jwt.AccessToken {
 		http.Error(w, domain.ErrInvalidToken.Error(), http.StatusUnauthorized)
 		return
 	}

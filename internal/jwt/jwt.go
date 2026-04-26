@@ -4,20 +4,23 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
-
 	"t-meeting-backend/internal/domain"
+
+	"github.com/golang-jwt/jwt/v5"
 )
+
+type TokenType string
 
 const (
-	TokenTypeAccess  = "access"
-	TokenTypeRefresh = "refresh"
+	AccessToken  TokenType = "access"
+	RefreshToken TokenType = "refresh"
 )
 
+type UserRole string
+
 type Claims struct {
-	Role string `json:"role,omitempty"`
-	Type string `json:"type"`
+	Role UserRole  `json:"role,omitempty"`
+	Type TokenType `json:"type"`
 	jwt.RegisteredClaims
 }
 
@@ -39,8 +42,8 @@ func (js *JWTManager) GenerateAccessToken(user *domain.User) (string, error) {
 	now := time.Now()
 
 	claims := Claims{
-		Role: user.Role,
-		Type: TokenTypeAccess,
+		Role: UserRole(user.Role),
+		Type: AccessToken,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   user.ID.String(),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -61,7 +64,7 @@ func (js *JWTManager) GenerateRefreshToken(user *domain.User) (string, error) {
 	now := time.Now()
 
 	claims := Claims{
-		Type: TokenTypeRefresh,
+		Type: RefreshToken,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   user.ID.String(),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -94,26 +97,4 @@ func (js *JWTManager) ParseToken(tokenString string) (*Claims, error) {
 		return nil, domain.ErrInvalidToken
 	}
 	return claims, nil
-}
-
-func (js *JWTManager) UserID(tokenString string) (uuid.UUID, error) {
-	claims, err := js.ParseToken(tokenString)
-	if err != nil {
-		return uuid.Nil, err
-	}
-
-	userID, err := uuid.Parse(claims.Subject)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("parse user id: %w", err)
-	}
-	return userID, nil
-}
-
-func (js *JWTManager) UserRole(tokenString string) (string, error) {
-	claims, err := js.ParseToken(tokenString)
-	if err != nil {
-		return "", err
-	}
-
-	return claims.Role, nil
 }
