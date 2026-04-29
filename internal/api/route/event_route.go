@@ -9,7 +9,7 @@ import (
 )
 
 func NewEventRouter(router chi.Router, eventController controller.EventController, jwtManager *jwt.JWTManager) {
-	router.Route("", func(r chi.Router) {
+	router.Group(func(r chi.Router) {
 		r.Use(middleware.JWTVerifier(jwtManager))
 		r.Post("/event", eventController.Create)
 		r.Get("/events", eventController.GetAll)
