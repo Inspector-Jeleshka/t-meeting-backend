@@ -2,10 +2,13 @@ package domain
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+var ErrPublishedEventNotFound = errors.New("published event not found")
 
 type NewEvent struct {
 	Name     string         `json:"name"`

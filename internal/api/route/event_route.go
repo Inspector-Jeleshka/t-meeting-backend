@@ -19,4 +19,6 @@ func NewEventRouter(router chi.Router, eventController controller.EventControlle
 			r.Delete("/", eventController.Delete)
 		})
 	})
+
+	router.Get("/published-event/{eventID}", eventController.GetPublishedEventByID)
 }

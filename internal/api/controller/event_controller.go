@@ -87,6 +87,27 @@ func (c *EventController) GetEventById(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (ec *EventController) GetPublishedEventByID(w http.ResponseWriter, r *http.Request) {
+	eventID, err := uuid.Parse(chi.URLParam(r, "eventID"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+	event, err := ec.Svc.GetPublishedByID(ctx, eventID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err = json.NewEncoder(w).Encode(event); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func (ec *EventController) Update(w http.ResponseWriter, r *http.Request) {
 	eventID, err := uuid.Parse(chi.URLParam(r, "eventID"))
 	if err != nil {
